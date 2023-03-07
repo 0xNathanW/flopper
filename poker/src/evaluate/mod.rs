@@ -3,6 +3,7 @@ pub mod bits;
 pub mod twoplustwo;
 
 #[cfg(test)]
+#[allow(dead_code, unused_variables, irrefutable_let_patterns)]
 mod test {
     use super::*;
     use crate::card::Card;

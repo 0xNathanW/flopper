@@ -88,6 +88,26 @@ impl From<u8> for Rank {
     }
 }
 
+impl Rank {
+    pub fn prime(&self) -> u32 {
+        match self {
+            Rank::Two => 2,
+            Rank::Three => 3,
+            Rank::Four => 5,
+            Rank::Five => 7,
+            Rank::Six => 11,
+            Rank::Seven => 13,
+            Rank::Eight => 17,
+            Rank::Nine => 19,
+            Rank::Ten => 23,
+            Rank::Jack => 29,
+            Rank::Queen => 31,
+            Rank::King => 37,
+            Rank::Ace => 41,
+        }
+    }
+}
+
 impl Display for Rank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -116,6 +136,10 @@ impl Card {
         Card((rank as u8) << 4 | (suit as u8))
     }
 
+    pub fn from_str(s: &str) -> Card {
+        s.into()
+    }
+
     pub fn suit(&self) -> Suit {
         (self.0 & 0b0000_0011).into()
     }
@@ -133,6 +157,23 @@ impl Card {
             _ => self.rank() as u8 / 2,
         }
     }
+
+    //   For use in two-plus-two hand evaluator.
+    //   An integer is made up of four bytes.  The high-order
+    //   bytes are used to hold the rank bit pattern, whereas
+    //   the low-order bytes hold the suit/rank/prime value
+    //   of the card.
+    //
+    //   +--------+--------+--------+--------+
+    //   |xxxbbbbb|bbbbbbbb|cdhsrrrr|xxpppppp|
+    //   +--------+--------+--------+--------+
+    pub fn mask_u32(&self) -> u32 {
+        let p = self.rank().prime();
+        let r = (self.rank() as u32) << 8;
+        let cdhs = 1 << (self.suit() as u32 + 13);
+        let b = 1 << (self.rank() as u32 + 16);
+        b | cdhs | r | p        
+   }
 }
 
 impl Display for Card {
@@ -301,5 +342,11 @@ mod tests {
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
         assert!(card.suit() as u8 == 2);
+    }
+
+    #[test]
+    fn test_mask_u32() {
+        assert_eq!(Card::from_str("5c").mask_u32(), 0b00000000_00001000_10000011_00000111);
+        assert_eq!(Card::from_str("Ah").mask_u32(), 0b00010000_00000000_00101100_00101001);
     }
 }
