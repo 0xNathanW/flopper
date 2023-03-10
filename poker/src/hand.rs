@@ -2,7 +2,7 @@ use crate::card::{Card, Deck, Rank};
 use thiserror::Error;
 use regex::Regex;
 
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
 pub enum HandRank {
     HighCard(u32),
     Pair(u32),
@@ -13,6 +13,25 @@ pub enum HandRank {
     FullHouse(u32),
     FourOfAKind(u32),
     StraightFlush(u32),
+}
+
+impl From<u16> for HandRank {
+    fn from(value: u16) -> Self {
+        match value {
+            
+            0..=1277    => HandRank::HighCard(value as u32),
+            1278..=4137 => HandRank::Pair(value as u32 - 1277),
+            4138..=4995 => HandRank::TwoPair(value as u32 - 4137),
+            4996..=5852 => HandRank::ThreeOfAKind(value as u32 - 4995),
+            5853..=5863 => HandRank::Straight(value as u32 - 5852),
+            5864..=7140 => HandRank::Flush(value as u32 - 5863),
+            7141..=7296 => HandRank::FullHouse(value as u32 - 7140),
+            7297..=7452 => HandRank::FourOfAKind(value as u32 - 7296),
+            7453..=7462 => HandRank::StraightFlush(value as u32 - 7452),
+
+            _ => panic!("Invalid hand rank value: {}", value),
+        }
+    }
 }
 
 #[derive(Error, Debug)]

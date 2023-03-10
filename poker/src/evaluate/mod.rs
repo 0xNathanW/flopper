@@ -1,6 +1,8 @@
 
 pub mod bits;
-pub mod twoplustwo;
+pub mod two_plus_two;
+pub mod senzee;
+mod tables;
 
 #[cfg(test)]
 #[allow(dead_code, unused_variables, irrefutable_let_patterns)]

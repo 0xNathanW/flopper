@@ -3,10 +3,10 @@ use rand::prelude::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Suit { 
-    Hearts, 
-    Diamonds,
-    Clubs, 
     Spades,
+    Hearts,
+    Diamonds,
+    Clubs,
 }
 
 const SUITS: [Suit; 4] = [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades];
@@ -14,10 +14,10 @@ const SUITS: [Suit; 4] = [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spade
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
         match value {
-            0 => Suit::Hearts,
-            1 => Suit::Diamonds,
-            2 => Suit::Clubs,
-            3 => Suit::Spades,
+            0 => Suit::Spades,
+            1 => Suit::Hearts,
+            2 => Suit::Diamonds,
+            3 => Suit::Clubs,
             _ => panic!("Invalid suit value: {}", value),
         }
     }
@@ -89,7 +89,7 @@ impl From<u8> for Rank {
 }
 
 impl Rank {
-    pub fn prime(&self) -> u32 {
+    pub fn prime(&self) -> i32 {
         match self {
             Rank::Two => 2,
             Rank::Three => 3,
@@ -167,12 +167,24 @@ impl Card {
     //   +--------+--------+--------+--------+
     //   |xxxbbbbb|bbbbbbbb|cdhsrrrr|xxpppppp|
     //   +--------+--------+--------+--------+
-    pub fn mask_u32(&self) -> u32 {
+    pub fn bit_mask(&self) -> i32 {
         let p = self.rank().prime();
-        let r = (self.rank() as u32) << 8;
-        let cdhs = 1 << (self.suit() as u32 + 13);
-        let b = 1 << (self.rank() as u32 + 16);
+        let r = (self.rank() as i32) << 8;
+        let cdhs = 1 << (self.suit() as i32 + 12);
+        let b = 1 << (self.rank() as i32 + 16);
         b | cdhs | r | p        
+   }
+
+   pub fn from_bit_mask(mask: i32) -> Card {
+        let rank = ((mask & 0x00_00_0F_00) >> 8) as u8;
+        let suit = match ((mask & 0x00_00_F0_00) >> 12) as u8 {
+            0b1000 => Suit::Clubs,
+            0b0100 => Suit::Diamonds,
+            0b0010 => Suit::Hearts,
+            0b0001 => Suit::Spades,
+            _ => panic!("Invalid suit value: {}", (mask & 0x00_00_F0_00) >> 12),
+        };
+        Card::new(rank.into(), suit)
    }
 }
 
@@ -279,6 +291,15 @@ impl Deck {
     }
 }
 
+impl Iterator for Deck {
+    
+    type Item = Card;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.draw()
+    }
+}
+
 impl Index<usize> for Deck {
     type Output = Card;
 
@@ -326,27 +347,34 @@ mod tests {
 
     #[test]
     fn test_from_str() {
-        let card = Card::new(Rank::Ace, Suit::Hearts);
+        let card = Card::from_str("Ah");
         assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Hearts);
 
-        let card = Card::new(Rank::Two, Suit::Clubs);
+        let card = Card::from_str("2d");
         assert!(card.rank() == Rank::Two);
+        assert!(card.suit() == Suit::Diamonds);
+
+        let card = Card::from_str("Ac");
+        assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Clubs);
     }
 
     #[test]
     fn test_suit_u8() {
         let card = Card::new(Rank::Ace, Suit::Hearts);
-        assert!(card.suit() as u8 == 0);
+        assert!(card.suit() as u8 == 1);
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
-        assert!(card.suit() as u8 == 2);
+        assert!(card.suit() as u8 == 3);
     }
 
     #[test]
     fn test_mask_u32() {
-        assert_eq!(Card::from_str("5c").mask_u32(), 0b00000000_00001000_10000011_00000111);
-        assert_eq!(Card::from_str("Ah").mask_u32(), 0b00010000_00000000_00101100_00101001);
+        assert_eq!(Card::from_str("5c").bit_mask(), 0b00000000_00001000_10000011_00000111);
+        assert_eq!(Card::from_str("Ah").bit_mask(), 0b00010000_00000000_00101100_00101001);
+
+        assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c"));
+        assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah"));
     }
 }
