@@ -1,17 +1,37 @@
-use crate::card::Card;
+use crate::{hand::{Hand, HandRank}, card::Card};
 
 use super::tables::*;
 
-// fn find(u: u32) -> u32 {
-//     let mut u = u;
-//     u += 0xe91aaa35;
-//     u ^= u >> 16;
-//     u += u << 8;
-//     u ^= u >> 4;
-//     let b = (u >> 8) & 0x1ff;
-//     let a = (u + (u << 2)) >> 19;
-//     a ^ HASH_ADJUST[b as usize] as u32
-// }
+pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> HandRank {
+    assert!(board.len() >= 3 && board.len() <= 5);
+
+    let mut cards = vec![Card::default(); 2 + board.len()];
+    cards[0] = hand.0;
+    cards[1] = hand.1;
+    cards[2.. 2 + board.len()].copy_from_slice(board);
+ 
+    rank_cards_senzee(&cards)
+}
+
+#[inline]
+pub fn rank_cards_senzee(hand: &[Card]) -> HandRank {
+    assert!(hand.len() >= 5 && hand.len() <= 7);
+    let cards = hand.iter().map(|&c| c.bit_mask()).collect::<Vec<u32>>();
+    rank_bit_mask_senzee(&cards)
+}
+
+#[inline]
+pub fn rank_bit_mask_senzee(hand: &[u32]) -> HandRank {
+    assert!(hand.len() >= 5 && hand.len() <= 7);
+    let rank_num = match hand.len() {
+        5 => eval_5(&hand),
+        6 => eval_6(&hand),
+        7 => eval_7(&hand),
+        _ => unreachable!(),
+    };
+
+    HandRank::from(rank_num)
+}
 
 fn find(u: usize) -> usize {
     
@@ -34,30 +54,30 @@ fn find(u: usize) -> usize {
     unreachable!("find_alt failed to find a match for {}. Low {}, high {}", u, low, high);
 }
 
-pub fn eval_5(hand: &[i32]) -> u16 {
+pub fn eval_5(hand: &[u32]) -> u16 {
     assert!(hand.len() == 5);
 
-    let q = (hand[0] | hand[1] | hand[2] | hand[3] | hand[4]) as usize >> 16;
+    let q = ((hand[0] | hand[1] | hand[2] | hand[3] | hand[4]) as usize) >> 16;
     if (hand[0] & hand[1] & hand[2] & hand[3] & hand[4] & 0xF000) != 0 {
-        return FLUSHES[q];
+        return 7461 - (FLUSHES[q] - 1);
     }
 
     let s = UNIQUE_5[q];
     if s != 0 {
-        return s;
+        return 7461 - (s - 1);
     }
 
     let q = (hand[0] & 0xFF) * (hand[1] & 0xFF) * (hand[2] & 0xFF) * (hand[3] & 0xFF) * (hand[4] & 0xFF);
     let rank = VALUES[find(q as usize)];
-    7461 - rank
+    7461 - (rank - 1)
 }
 
-pub fn eval_6(hand: &[i32]) -> u16 {
+pub fn eval_6(hand: &[u32]) -> u16 {
     assert!(hand.len() == 6);
 
     let mut tmp;
     let mut best = 0;
-    let mut sub_hand = [0_i32; 5];
+    let mut sub_hand = [0_u32; 5];
 
     for id in PERM_6.iter() {
         
@@ -74,12 +94,12 @@ pub fn eval_6(hand: &[i32]) -> u16 {
     best
 }
 
-pub fn eval_7(hand: &[i32]) -> u16 {
+pub fn eval_7(hand: &[u32]) -> u16 {
     assert!(hand.len() == 7);
 
     let mut tmp;
     let mut best = 0;
-    let mut sub_hand = [0_i32; 5];
+    let mut sub_hand = [0_u32; 5];
 
     for id in PERM_7.iter() {
         
@@ -103,15 +123,15 @@ mod tests {
     use crate::{card::Deck, hand::HandRank};
 
     #[test]
-    fn test_5_card_combos_eval() {
+    fn test_combos_5_senzee() {
 
         let deck = Deck::new();
-        let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<i32>>();
+        let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<u32>>();
 
         let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
         let mut rank_num_count: HashMap<u16, bool> = HashMap::new();
     
-        let mut hand = [0_i32; 5];
+        let mut hand = [0_u32; 5];
         for a in 0..52 {
             for b in (a + 1)..52 {
                 for c in (b + 1)..52 {
@@ -124,13 +144,8 @@ mod tests {
                             hand[3] = cards[d];
                             hand[4] = cards[e];
                             
-                            for i in 0..5 {
-                                print!("{:?} ", Card::from_bit_mask(hand[i]));
-                            }
-
                             let rank = eval_5(&hand);
-                            print!("-> {:?}\n", HandRank::from(rank));
-                            rank_num_count.entry(rank).or_insert(true);
+                            rank_num_count.entry(rank).or_insert(true);                            
                         }
                     }
                 }
@@ -138,19 +153,10 @@ mod tests {
         }
 
         for key in rank_num_count.keys() {
-            let rank_class: HandRank = (*key).into();
-            let rank_class = match rank_class {
-                HandRank::HighCard(_) => HandRank::HighCard(0),
-                HandRank::Pair(_) => HandRank::Pair(0),
-                HandRank::TwoPair(_) => HandRank::TwoPair(0),
-                HandRank::ThreeOfAKind(_) => HandRank::ThreeOfAKind(0),
-                HandRank::Straight(_) => HandRank::Straight(0),
-                HandRank::Flush(_) => HandRank::Flush(0),
-                HandRank::FullHouse(_) => HandRank::FullHouse(0),
-                HandRank::FourOfAKind(_) => HandRank::FourOfAKind(0),
-                HandRank::StraightFlush(_) => HandRank::StraightFlush(0),
-            };
-            let count = rank_count.entry(rank_class).or_insert(0);
+            
+            let count = rank_count
+                .entry(HandRank::rank_variant(*key))
+                .or_insert(0);
             *count += 1;
         }
 

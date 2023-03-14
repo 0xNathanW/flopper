@@ -18,18 +18,16 @@ pub enum HandRank {
 impl From<u16> for HandRank {
     fn from(value: u16) -> Self {
         match value {
-            
-            0..=1277    => HandRank::HighCard(value as u32),
-            1278..=4137 => HandRank::Pair(value as u32 - 1277),
-            4138..=4995 => HandRank::TwoPair(value as u32 - 4137),
-            4996..=5852 => HandRank::ThreeOfAKind(value as u32 - 4995),
-            5853..=5863 => HandRank::Straight(value as u32 - 5852),
-            5864..=7140 => HandRank::Flush(value as u32 - 5863),
-            7141..=7296 => HandRank::FullHouse(value as u32 - 7140),
-            7297..=7452 => HandRank::FourOfAKind(value as u32 - 7296),
-            7453..=7462 => HandRank::StraightFlush(value as u32 - 7452),
-
-            _ => panic!("Invalid hand rank value: {}", value),
+            0..=1276 => HandRank::HighCard(value as u32),
+            1277..=4136 => HandRank::Pair(value as u32 - 1277),
+            4137..=4994 => HandRank::TwoPair(value as u32 - 4137),
+            4995..=5852 => HandRank::ThreeOfAKind(value as u32 - 4995),
+            5853..=5862 => HandRank::Straight(value as u32 - 5853),
+            5863..=7139 => HandRank::Flush(value as u32 - 5863),
+            7140..=7295 => HandRank::FullHouse(value as u32 - 7140),
+            7296..=7451 => HandRank::FourOfAKind(value as u32 - 7296),
+            7452..=7461 => HandRank::StraightFlush(value as u32 - 7452),
+            _ => panic!("Unexpected hand rank value! '{}'", value)
         }
     }
 }
@@ -110,6 +108,24 @@ impl Hand {
         }
 
         base - gap
+    }
+}
+
+#[cfg(test)]
+impl HandRank {
+    pub fn rank_variant(value: u16) -> HandRank {
+        match value {
+            0..=1276 => HandRank::HighCard(0),
+            1277..=4136 => HandRank::Pair(0),
+            4137..=4994 => HandRank::TwoPair(0),
+            4995..=5852 => HandRank::ThreeOfAKind(0),
+            5853..=5862 => HandRank::Straight(0),
+            5863..=7139 => HandRank::Flush(0),
+            7140..=7295 => HandRank::FullHouse(0),
+            7296..=7451 => HandRank::FourOfAKind(0),
+            7452..=7461 => HandRank::StraightFlush(0),
+            _ => panic!("Unexpected hand rank value! '{}'", value)
+        }
     }
 }
 

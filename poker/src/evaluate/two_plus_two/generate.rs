@@ -1,10 +1,13 @@
 use std::collections::{BTreeMap, VecDeque};
+use std::io::{Write, Result, Read};
+use std::fs::File;
+use super::eval::do_eval;
 
 const TABLE_SIZE: usize = 32_487_834;
 
-pub fn generate_lookup_table() -> [i32; TABLE_SIZE] {
+pub fn generate_lookup_table() -> Vec<i32> {
 
-    let mut lookup_table = [0_i32; TABLE_SIZE];
+    let mut lookup_table = vec![0; TABLE_SIZE];
 
     let mut sub_hands: BTreeMap<u64, i64> = BTreeMap::new();
     let mut sub_hand_queue: VecDeque<u64> = VecDeque::new();
@@ -16,7 +19,7 @@ pub fn generate_lookup_table() -> [i32; TABLE_SIZE] {
     while !sub_hand_queue.is_empty() {
         
         let sub_hand = sub_hand_queue.pop_front().unwrap();
-        for card in 0..53 {
+        for card in 1..53 {
             
             let (num_cards, id) = get_id(sub_hand as i64, card);
             let id = match id {
@@ -25,7 +28,7 @@ pub fn generate_lookup_table() -> [i32; TABLE_SIZE] {
             };
             
             let returned = sub_hands.insert(id as u64, 0);
-            if returned.is_none() && num_cards < 7 {
+            if returned.is_none() && num_cards < 6 {
                 sub_hand_queue.push_back(id as u64);
             }
         }
@@ -46,7 +49,7 @@ pub fn generate_lookup_table() -> [i32; TABLE_SIZE] {
             
             num_cards = n;
             if num_cards == 7 {
-                // do eval 
+                lookup_table[max_hr as usize] = do_eval(id);
                 continue;
             }
             if id == 0 {
@@ -58,7 +61,7 @@ pub fn generate_lookup_table() -> [i32; TABLE_SIZE] {
         }
     
         if num_cards == 6 || num_cards == 7 {
-            // lookup_table[(sub_hand_pos * 53 + 53) as usize] = do_eval
+            lookup_table[(sub_hand_pos * 53 + 53) as usize] = do_eval(*sub_hand as i64)
         }
     }
 
@@ -79,6 +82,7 @@ fn get_id(id_in: i64, card: i32) -> (i32, Option<i64>) {
         work_cards[n + 1] = ((id_in >> (n *8)) & 0xFF) as i32;
     }
 
+    
     work_cards[0] = (((new_card >> 2) + 1) << 4) + (new_card & 0x3) + 1;
     
     while work_cards[num_cards] != 0 {
@@ -146,12 +150,99 @@ fn get_id(id_in: i64, card: i32) -> (i32, Option<i64>) {
     (
         num_cards as i32,
         Some(work_cards[0] as i64 + 
-            (work_cards[1] as i64) << 8 +
-            (work_cards[2] as i64) << 16 +
-            (work_cards[3] as i64) << 24 +
-            (work_cards[4] as i64) << 32 +
-            (work_cards[5] as i64) << 40 +
-            (work_cards[6] as i64) << 48
+            ((work_cards[1] as i64) << 8) +
+            ((work_cards[2] as i64) << 16) +
+            ((work_cards[3] as i64) << 24) +
+            ((work_cards[4] as i64) << 32) +
+            ((work_cards[5] as i64) << 40) +
+            ((work_cards[6] as i64) << 48)
         )
     )
+}
+
+pub fn save_lookup_table(lookup_table: Vec<i32>) -> Result<()> {
+
+        let mut file = File::create("lookup_table.bin")?;
+        let buffer: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                lookup_table.as_ptr() as *const u8,
+                TABLE_SIZE * 4,
+            )
+        };
+    
+        file.write_all(buffer)?;
+        Ok(())
+}
+
+pub fn load_lookup_table() -> Result<Vec<i32>> {
+    
+    let mut file = {
+        match File::open("lookup_table.bin") {
+            Ok(file) => file,
+            Err(e) => match e.kind() {
+                std::io::ErrorKind::NotFound => {
+                    File::open("poker/lookup_table.bin")?
+                },
+                _ => return Err(e.into()),
+            }
+        }
+    };
+    let mut buffer = vec![0_u8; TABLE_SIZE * 4];
+    let n = file.read(&mut buffer)?;
+    if n != TABLE_SIZE * 4 {
+        return Err(std::io::ErrorKind::UnexpectedEof.into());
+    }
+
+    let lookup_table: Vec<i32> = unsafe {
+        let ptr = buffer.as_ptr() as *mut i32;
+        std::mem::forget(buffer);
+        Vec::from_raw_parts(ptr, TABLE_SIZE, TABLE_SIZE)
+    };
+    Ok(lookup_table)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use md5::{Digest, Md5};
+    use hex_literal::hex;
+
+    #[test]
+    fn test_lookup_hash() {
+        let lookup_table = generate_lookup_table();
+        // MD5 sum should be 5003cf3e6d5c9b8ee77094e168bfe73f
+        let mut hasher = Md5::new();
+        let buffer: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                lookup_table.as_ptr() as *const u8,
+                TABLE_SIZE * 4,
+            )
+        };
+        hasher.update(&buffer);
+        let result = hasher.finalize();
+        assert_eq!(result[..], hex!("5003cf3e6d5c9b8ee77094e168bfe73f"))
+    }
+
+    #[test]
+    fn test_lookup_save_load_hash() {
+        let lookup_table = match load_lookup_table() {
+            Ok(lookup_table) => lookup_table,
+            Err(_) => {
+                let lookup_table = generate_lookup_table();
+                save_lookup_table(lookup_table.clone()).unwrap();
+                lookup_table
+            }
+        };
+        // MD5 sum should be 5003cf3e6d5c9b8ee77094e168bfe73f
+        let mut hasher = Md5::new();
+        let buffer: &[u8] = unsafe {
+            std::slice::from_raw_parts(
+                lookup_table.as_ptr() as *const u8,
+                TABLE_SIZE * 4,
+            )
+        };
+        hasher.update(&buffer);
+        let result = hasher.finalize();
+        assert_eq!(result[..], hex!("5003cf3e6d5c9b8ee77094e168bfe73f"))
+    }
 }

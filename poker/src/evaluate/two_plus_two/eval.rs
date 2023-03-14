@@ -2,7 +2,7 @@ use super::super::senzee::*;
 
 const PRIMES: [i32; 13] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41];
 
-fn do_eval(id: i64) -> i32 {
+pub fn do_eval(id: i64) -> i32 {
 
     let mut main_suit = 20;
     let mut suit_iter = 1;
@@ -15,7 +15,7 @@ fn do_eval(id: i64) -> i32 {
 
     for c in 0..7 {
 
-        hold_cards[c] = ((id >> (id * 8)) & 0xFF) as i32;
+        hold_cards[c] = ((id >> (c * 8)) & 0xFF) as i32;
         if hold_cards[c] == 0 {
             break;
         }
@@ -61,11 +61,15 @@ fn do_eval(id: i64) -> i32 {
         work_cards[c] = (1 << (16 + rank)) | (1 << (suit + 11)) | (rank << 8) | PRIMES[rank as usize] 
     }
 
-    match num_eval_cards {
-        5 => eval_5(&work_cards[0..5]) as i32,
-        6 => eval_6(&work_cards[0..6]) as i32,
-        7 => eval_7(&work_cards[0..7]) as i32,
-        _ => unreachable!(),
+    let mut new_work_cards = [0_u32; 8]; 
+    for c in 0..num_eval_cards {
+        new_work_cards[c] = work_cards[c] as u32;
     }
 
+    match num_eval_cards {
+        5 => eval_5(&new_work_cards[0..5]) as i32,
+        6 => eval_6(&new_work_cards[0..6]) as i32,
+        7 => eval_7(&new_work_cards[0..7]) as i32,
+        _ => unreachable!(),
+    }
 }

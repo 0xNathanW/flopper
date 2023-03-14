@@ -3,19 +3,19 @@ use rand::prelude::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Suit { 
-    Spades,
     Hearts,
+    Spades,
     Diamonds,
     Clubs,
 }
 
-const SUITS: [Suit; 4] = [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades];
+const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
 
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
         match value {
-            0 => Suit::Spades,
-            1 => Suit::Hearts,
+            0 => Suit::Hearts,
+            1 => Suit::Spades,
             2 => Suit::Diamonds,
             3 => Suit::Clubs,
             _ => panic!("Invalid suit value: {}", value),
@@ -89,7 +89,7 @@ impl From<u8> for Rank {
 }
 
 impl Rank {
-    pub fn prime(&self) -> i32 {
+    pub fn prime(&self) -> u32 {
         match self {
             Rank::Two => 2,
             Rank::Three => 3,
@@ -140,6 +140,10 @@ impl Card {
         s.into()
     }
 
+    pub fn vec_from_str(s: &str) -> Vec<Card> {
+        s.split_whitespace().map(|s| s.into()).collect()
+    }
+
     pub fn suit(&self) -> Suit {
         (self.0 & 0b0000_0011).into()
     }
@@ -167,15 +171,20 @@ impl Card {
     //   +--------+--------+--------+--------+
     //   |xxxbbbbb|bbbbbbbb|cdhsrrrr|xxpppppp|
     //   +--------+--------+--------+--------+
-    pub fn bit_mask(&self) -> i32 {
+    pub fn bit_mask(&self) -> u32 {
         let p = self.rank().prime();
-        let r = (self.rank() as i32) << 8;
-        let cdhs = 1 << (self.suit() as i32 + 12);
+        let r = (self.rank() as u32) << 8;
+        let suit : u32  = match self.suit() {
+            Suit::Hearts   => 0x1000,
+            Suit::Spades   => 0x2000,
+            Suit::Diamonds => 0x4000,
+            Suit::Clubs    => 0x8000,
+        };
         let b = 1 << (self.rank() as i32 + 16);
-        b | cdhs | r | p        
+        b | suit | r | p        
    }
 
-   pub fn from_bit_mask(mask: i32) -> Card {
+   pub fn from_bit_mask(mask: u32) -> Card {
         let rank = ((mask & 0x00_00_0F_00) >> 8) as u8;
         let suit = match ((mask & 0x00_00_F0_00) >> 12) as u8 {
             0b1000 => Suit::Clubs,
@@ -185,6 +194,12 @@ impl Card {
             _ => panic!("Invalid suit value: {}", (mask & 0x00_00_F0_00) >> 12),
         };
         Card::new(rank.into(), suit)
+   }
+
+    // Idx in 2+2 hand evaluator lookup table.
+    #[inline]
+    pub fn idx(&self) -> usize {
+        (4 * (self.rank() as usize)) + (self.suit() as usize) + 1
    }
 }
 
@@ -376,5 +391,11 @@ mod tests {
 
         assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c"));
         assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah"));
+    }
+
+    #[test]
+    fn test_card_idx() {
+        assert_eq!(Card::from_str("5c").idx(), 16);
+        assert_eq!(Card::from_str("Ah").idx(), 49);
     }
 }
