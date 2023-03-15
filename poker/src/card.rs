@@ -286,6 +286,7 @@ impl From<&str> for Card {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct Deck(Vec<Card>);
 
 impl Deck {

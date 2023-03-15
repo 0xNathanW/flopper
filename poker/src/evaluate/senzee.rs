@@ -29,12 +29,6 @@ pub fn rank_bit_mask_senzee(hand: &[u32]) -> HandRank {
         7 => eval_7(&hand),
         _ => unreachable!(),
     };
-    if rank_num == 7462 {
-        // Print hand in normal form
-        for card in hand {
-            print!("{:?} ", Card::from_bit_mask(*card));
-        }
-    }
 
     HandRank::from(rank_num)
 }

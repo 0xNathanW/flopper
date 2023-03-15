@@ -175,7 +175,6 @@ pub fn save_lookup_table(lookup_table: Vec<i32>) -> Result<()> {
 }
 
 pub fn load_lookup_table() -> Result<Vec<i32>> {
-    
     let mut file = {
         match File::open("lookup_table.bin") {
             Ok(file) => file,
