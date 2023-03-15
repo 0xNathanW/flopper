@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use poker::card::Card;
 use poker::{card::Deck, hand::HandRank};
 use poker::evaluate::{
     rank_bit_mask_senzee, 
@@ -109,7 +110,7 @@ fn test_combo_7_naive() {
         let cards = Deck::new(); 
         
         let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-        let mut hand = [Card; 7];
+        let mut hand = [Card::default(); 7];
         
         for a in 0..52 {
             for b in (a + 1)..52 {
