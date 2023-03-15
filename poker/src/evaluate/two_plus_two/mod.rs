@@ -1,4 +1,4 @@
-use crate::card::Card;
+use crate::{card::Card, hand::HandRank};
 
 mod generate;
 mod eval;
@@ -9,7 +9,7 @@ pub use generate::{
     load_lookup_table,
 };
 
-pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> u16 {
+pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> HandRank {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     // Convert the cards to their index in the lookup table.
     let hand_idxs = hand.iter().map(|&c| c.idx()).collect::<Vec<usize>>();
@@ -17,7 +17,7 @@ pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-pub fn rank_cards_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> u16 {
+pub fn rank_cards_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> HandRank {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     // Convert the cards to their index in the lookup table.
     let hand_idxs = hand.iter().map(|&c| c.idx()).collect::<Vec<usize>>();
@@ -25,15 +25,17 @@ pub fn rank_cards_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-pub fn rank_idx_two_plus_two(hand: &[usize], lookup_table: &[i32]) -> u16 {
+pub fn rank_idx_two_plus_two(hand: &[usize], lookup_table: &[i32]) -> HandRank {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     
-    match hand.len() {
+    let rank = match hand.len() {
         5 => rank_hand_5(hand, lookup_table),
         6 => rank_hand_6(hand, lookup_table),
         7 => rank_hand_7(hand, lookup_table),
         _ => unreachable!(),
-    }
+    };
+
+    HandRank::from(rank)
 }
 
 #[inline]
@@ -68,7 +70,6 @@ fn rank_hand_7(hand: &[usize], lookup_table: &[i32]) -> u16 {
     r = lookup_table[r + hand[4]] as usize;
     r = lookup_table[r + hand[5]] as usize;
     r = lookup_table[r + hand[6]] as usize;
-    r = lookup_table[r] as usize;
     r as u16
 }
 
@@ -90,98 +91,52 @@ mod tests {
         }
     }
 
-    // Ranking frequencies: https://en.wikipedia.org/wiki/Poker_probability
+   #[test]
+   fn test_combo_7_two_plus_two() {
+    
+    let lookup_table = setup_lookup_table();
+    let cards = Deck::new().into_iter().map(|c| c.idx()).collect::<Vec<usize>>(); 
+    let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
 
-    #[test]
-    fn test_combo_5_two_plus_two() {
-        let lookup_table = setup_lookup_table();
-        let cards = Deck::new().into_iter().map(|c| c.idx()).collect::<Vec<usize>>(); 
-        
-        let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-        let mut rank_num_count: HashMap<u16, bool> = HashMap::new();
+    let mut hand = [0_usize; 7];
+    for a in 0..52 {
+        for b in (a + 1)..52 {
+            for c in (b + 1)..52 {
+                for d in (c + 1)..52 {
+                    for e in (d + 1)..52 {
+                        for f in (e + 1)..52 {
+                            for g in (f + 1)..52 {
+                                
+                                hand[0] = cards[a];
+                                hand[1] = cards[b];
+                                hand[2] = cards[c];
+                                hand[3] = cards[d];
+                                hand[4] = cards[e];
+                                hand[5] = cards[f];
+                                hand[6] = cards[g];
 
-        let mut hand = [0_usize; 5];
-        for a in 0..52 {
-            for b in (a + 1)..52 {
-                for c in (b + 1)..52 {
-                    for d in (c + 1)..52 {
-                        for e in (d + 1)..52 {
-
-                            hand[0] = cards[a];
-                            hand[1] = cards[b];
-                            hand[2] = cards[c];
-                            hand[3] = cards[d];
-                            hand[4] = cards[e];
-
-                            let rank = rank_idx_two_plus_two(&hand, &lookup_table);
-                            rank_num_count.entry(rank).or_insert(true);
-                        }
-                    }
-                }
-            }
-        }
-
-        for key in rank_num_count.keys() {
-            let count = rank_count
-                .entry(HandRank::rank_variant(*key))
-                .or_insert(0);
-            *count += 1;
-        }
-
-        assert_eq!(rank_num_count.len(), 7462);
-        assert_eq!(*rank_count.get(&HandRank::HighCard(0)).unwrap(), 1277);
-        assert_eq!(*rank_count.get(&HandRank::Pair(0)).unwrap(), 2860);
-        assert_eq!(*rank_count.get(&HandRank::TwoPair(0)).unwrap(), 858);
-        assert_eq!(*rank_count.get(&HandRank::ThreeOfAKind(0)).unwrap(), 858);
-        assert_eq!(*rank_count.get(&HandRank::Straight(0)).unwrap(), 10);
-        assert_eq!(*rank_count.get(&HandRank::Flush(0)).unwrap(), 1277);
-        assert_eq!(*rank_count.get(&HandRank::FullHouse(0)).unwrap(), 156);
-        assert_eq!(*rank_count.get(&HandRank::FourOfAKind(0)).unwrap(), 156);
-        assert_eq!(*rank_count.get(&HandRank::StraightFlush(0)).unwrap(), 10);
-    }
-
-    #[test]
-    fn test_combo_7_two_plus_two() {
-        let lookup_table = setup_lookup_table();
-        let cards = Deck::new().into_iter().map(|c| c.idx()).collect::<Vec<usize>>(); 
-        
-        let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-        let mut rank_num_count: HashMap<u16, bool> = HashMap::new();
-        println!("b");
-        let mut hand = [0_usize; 7];
-        for a in 0..52 {
-            for b in (a + 1)..52 {
-                for c in (b + 1)..52 {
-                    for d in (c + 1)..52 {
-                        for e in (d + 1)..52 {
-                            for f in (e + 1)..52 {
-                                for g in (f + 1)..52 {
-                                    
-                                    hand[0] = cards[a];
-                                    hand[1] = cards[b];
-                                    hand[2] = cards[c];
-                                    hand[3] = cards[d];
-                                    hand[4] = cards[e];
-                                    hand[5] = cards[f];
-                                    hand[6] = cards[g];
-
-                                    let rank = rank_idx_two_plus_two(&hand, &lookup_table);
-                                    rank_num_count.entry(rank).or_insert(true);
-                                }
+                                let rank = rank_idx_two_plus_two(&hand, &lookup_table);
+                                
+                                rank_count
+                                    .entry(HandRank::rank_variant(rank))
+                                    .and_modify(|count| *count += 1)
+                                    .or_insert(1);
                             }
                         }
                     }
                 }
             }
         }
-
-        for key in rank_num_count.keys() {
-            let count = rank_count
-                .entry(HandRank::rank_variant(*key))
-                .or_insert(0);
-            *count += 1;
-        }
-
-        println!("{}", rank_num_count.len());
     }
+
+    assert_eq!(*rank_count.get(&HandRank::HighCard(0)).unwrap(), 23294460);
+    assert_eq!(*rank_count.get(&HandRank::Pair(0)).unwrap(), 58627800);
+    assert_eq!(*rank_count.get(&HandRank::TwoPair(0)).unwrap(), 31433400);
+    assert_eq!(*rank_count.get(&HandRank::ThreeOfAKind(0)).unwrap(), 6461620);
+    assert_eq!(*rank_count.get(&HandRank::Straight(0)).unwrap(), 6180020);
+    assert_eq!(*rank_count.get(&HandRank::Flush(0)).unwrap(), 4047644);
+    assert_eq!(*rank_count.get(&HandRank::FullHouse(0)).unwrap(), 3473184);
+    assert_eq!(*rank_count.get(&HandRank::FourOfAKind(0)).unwrap(), 224848);
+    assert_eq!(*rank_count.get(&HandRank::StraightFlush(0)).unwrap(), 41584);
+   }
 }

@@ -111,20 +111,18 @@ impl Hand {
     }
 }
 
-#[cfg(test)]
 impl HandRank {
-    pub fn rank_variant(value: u16) -> HandRank {
+    pub fn rank_variant(value: HandRank) -> HandRank {
         match value {
-            0..=1276 => HandRank::HighCard(0),
-            1277..=4136 => HandRank::Pair(0),
-            4137..=4994 => HandRank::TwoPair(0),
-            4995..=5852 => HandRank::ThreeOfAKind(0),
-            5853..=5862 => HandRank::Straight(0),
-            5863..=7139 => HandRank::Flush(0),
-            7140..=7295 => HandRank::FullHouse(0),
-            7296..=7451 => HandRank::FourOfAKind(0),
-            7452..=7461 => HandRank::StraightFlush(0),
-            _ => panic!("Unexpected hand rank value! '{}'", value)
+            HandRank::HighCard(_) => HandRank::HighCard(0),
+            HandRank::Pair(_) => HandRank::Pair(0),
+            HandRank::TwoPair(_) => HandRank::TwoPair(0),
+            HandRank::ThreeOfAKind(_) => HandRank::ThreeOfAKind(0),
+            HandRank::Straight(_) => HandRank::Straight(0),
+            HandRank::Flush(_) => HandRank::Flush(0),
+            HandRank::FullHouse(_) => HandRank::FullHouse(0),
+            HandRank::FourOfAKind(_) => HandRank::FourOfAKind(0),
+            HandRank::StraightFlush(_) => HandRank::StraightFlush(0),
         }
     }
 }

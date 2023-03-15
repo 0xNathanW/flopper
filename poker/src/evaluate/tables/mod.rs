@@ -3,13 +3,11 @@ mod unique5;
 mod product;
 mod value;
 mod flush;
-mod hash;
 
 pub use unique5::*;
 pub use product::*;
 pub use value::*;
 pub use flush::*;
-pub use hash::*;
 
 pub const PERM_7: [[u8; 5]; 21] = [
     [ 0, 1, 2, 3, 4 ],

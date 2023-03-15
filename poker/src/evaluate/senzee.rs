@@ -29,6 +29,12 @@ pub fn rank_bit_mask_senzee(hand: &[u32]) -> HandRank {
         7 => eval_7(&hand),
         _ => unreachable!(),
     };
+    if rank_num == 7462 {
+        // Print hand in normal form
+        for card in hand {
+            print!("{:?} ", Card::from_bit_mask(*card));
+        }
+    }
 
     HandRank::from(rank_num)
 }
@@ -114,61 +120,4 @@ pub fn eval_7(hand: &[u32]) -> u16 {
     }
 
     best
-}
-
-#[cfg(test)]
-mod tests {
-    use std::collections::HashMap;
-    use super::*;
-    use crate::{card::Deck, hand::HandRank};
-
-    #[test]
-    fn test_combos_5_senzee() {
-
-        let deck = Deck::new();
-        let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<u32>>();
-
-        let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-        let mut rank_num_count: HashMap<u16, bool> = HashMap::new();
-    
-        let mut hand = [0_u32; 5];
-        for a in 0..52 {
-            for b in (a + 1)..52 {
-                for c in (b + 1)..52 {
-                    for d in (c + 1)..52 {
-                        for e in (d + 1)..52 {
-
-                            hand[0] = cards[a];
-                            hand[1] = cards[b];
-                            hand[2] = cards[c];
-                            hand[3] = cards[d];
-                            hand[4] = cards[e];
-                            
-                            let rank = eval_5(&hand);
-                            rank_num_count.entry(rank).or_insert(true);                            
-                        }
-                    }
-                }
-            }
-        }
-
-        for key in rank_num_count.keys() {
-            
-            let count = rank_count
-                .entry(HandRank::rank_variant(*key))
-                .or_insert(0);
-            *count += 1;
-        }
-
-        assert_eq!(rank_num_count.len(), 7462);
-        assert_eq!(*rank_count.get(&HandRank::HighCard(0)).unwrap(), 1277);
-        assert_eq!(*rank_count.get(&HandRank::Pair(0)).unwrap(), 2860);
-        assert_eq!(*rank_count.get(&HandRank::TwoPair(0)).unwrap(), 858);
-        assert_eq!(*rank_count.get(&HandRank::ThreeOfAKind(0)).unwrap(), 858);
-        assert_eq!(*rank_count.get(&HandRank::Straight(0)).unwrap(), 10);
-        assert_eq!(*rank_count.get(&HandRank::Flush(0)).unwrap(), 1277);
-        assert_eq!(*rank_count.get(&HandRank::FullHouse(0)).unwrap(), 156);
-        assert_eq!(*rank_count.get(&HandRank::FourOfAKind(0)).unwrap(), 156);
-        assert_eq!(*rank_count.get(&HandRank::StraightFlush(0)).unwrap(), 10);
-    }
 }

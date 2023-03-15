@@ -1,13 +1,20 @@
-
 mod naive;
 mod two_plus_two;
 mod senzee;
 mod tables;
 
-pub use naive::{rank_hand_naive, rank_cards_naive};
-pub use senzee::rank_hand_senzee;
+pub use naive::{
+    rank_hand_naive, 
+    rank_cards_naive
+};
+pub use senzee::{
+    rank_hand_senzee, 
+    rank_cards_senzee, 
+    rank_bit_mask_senzee
+};
 pub use two_plus_two::{
-    rank_hand_two_plus_two, 
+    rank_hand_two_plus_two,
+    rank_cards_two_plus_two,
     rank_idx_two_plus_two,
     load_lookup_table, 
     save_lookup_table,

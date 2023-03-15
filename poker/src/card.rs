@@ -119,7 +119,7 @@ impl Display for Rank {
             Rank::Seven => write!(f, "7"),
             Rank::Eight => write!(f, "8"),
             Rank::Nine => write!(f, "9"),
-            Rank::Ten => write!(f, "10"),
+            Rank::Ten => write!(f, "T"),
             Rank::Jack => write!(f, "J"),
             Rank::Queen => write!(f, "Q"),
             Rank::King => write!(f, "K"),
@@ -128,7 +128,7 @@ impl Display for Rank {
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Hash)]
 pub struct Card(u8);
 
 impl Card {
@@ -142,6 +142,12 @@ impl Card {
 
     pub fn vec_from_str(s: &str) -> Vec<Card> {
         s.split_whitespace().map(|s| s.into()).collect()
+    }
+
+    pub fn random<R: Rng>(rng: &mut R) -> Card {
+        let rank = rng.gen_range(0..13);
+        let suit = rng.gen_range(0..4);
+        Card::new(rank.into(), suit.into())
     }
 
     pub fn suit(&self) -> Suit {
@@ -186,12 +192,12 @@ impl Card {
 
    pub fn from_bit_mask(mask: u32) -> Card {
         let rank = ((mask & 0x00_00_0F_00) >> 8) as u8;
-        let suit = match ((mask & 0x00_00_F0_00) >> 12) as u8 {
-            0b1000 => Suit::Clubs,
-            0b0100 => Suit::Diamonds,
-            0b0010 => Suit::Hearts,
-            0b0001 => Suit::Spades,
-            _ => panic!("Invalid suit value: {}", (mask & 0x00_00_F0_00) >> 12),
+        let suit = match mask & 0x00_00_F0_00 {
+            0x1000 => Suit::Hearts,
+            0x2000 => Suit::Spades,
+            0x4000 => Suit::Diamonds,
+            0x8000 => Suit::Clubs,
+            _ => panic!("Invalid suit value: {}", mask),
         };
         Card::new(rank.into(), suit)
    }
@@ -200,6 +206,13 @@ impl Card {
     #[inline]
     pub fn idx(&self) -> usize {
         (4 * (self.rank() as usize)) + (self.suit() as usize) + 1
+   }
+
+   #[inline]
+   pub fn from_idx(idx: usize) -> Card {
+        let rank = ((idx - 1) / 4) as u8;
+        let suit = ((idx - 1) % 4) as u8;
+        Card::new(rank.into(), suit.into())
    }
 }
 
@@ -378,7 +391,7 @@ mod tests {
     #[test]
     fn test_suit_u8() {
         let card = Card::new(Rank::Ace, Suit::Hearts);
-        assert!(card.suit() as u8 == 1);
+        assert!(card.suit() as u8 == 0);
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
         assert!(card.suit() as u8 == 3);
@@ -387,7 +400,7 @@ mod tests {
     #[test]
     fn test_mask_u32() {
         assert_eq!(Card::from_str("5c").bit_mask(), 0b00000000_00001000_10000011_00000111);
-        assert_eq!(Card::from_str("Ah").bit_mask(), 0b00010000_00000000_00101100_00101001);
+        assert_eq!(Card::from_str("Ah").bit_mask(), 0b00010000_00000000_00011100_00101001);
 
         assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c"));
         assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah"));
@@ -397,5 +410,11 @@ mod tests {
     fn test_card_idx() {
         assert_eq!(Card::from_str("5c").idx(), 16);
         assert_eq!(Card::from_str("Ah").idx(), 49);
+    }
+
+    #[test]
+    fn test_card_from_idx() {
+        assert_eq!(Card::from_idx(16), Card::from_str("5c"));
+        assert_eq!(Card::from_idx(49), Card::from_str("Ah"));
     }
 }

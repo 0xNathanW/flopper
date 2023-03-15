@@ -29,7 +29,7 @@ fn rank_hand_not_5(cards: &[Card]) -> HandRank {
     let mut suit_set = [0_u32; 4];
 
     let mut rank_to_count = [0_u8; 13];
-    let mut count_to_rank = [0_u32; 5];
+    let mut count_to_rank = [0_u32; 7];
 
     // Add the cards on the board to the set of cards.
     for card in cards.iter() {
@@ -207,4 +207,9 @@ fn n_msb(r: u32, n: u32) -> u32 {
 #[inline]
 fn msb(r: u32) -> u32 {
     1 << (31 - r.leading_zeros())
+}
+
+#[cfg(test)]
+mod tests {
+
 }
