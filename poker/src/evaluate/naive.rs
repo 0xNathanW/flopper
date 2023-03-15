@@ -1,25 +1,38 @@
 use crate::card::Card;
 use crate::hand::{HandRank, Hand};
 
-pub fn bits_hand_rank(hand: &Hand, board: &[Card]) -> HandRank {
+pub fn rank_hand_naive(hand: &Hand, board: &[Card]) -> HandRank {
+    assert!(board.len() >= 3 && board.len() <= 5);
+
+    let mut cards = [Card::default(); 7];
+    cards[0] = hand.0;
+    cards[1] = hand.1;
+    cards[2..2 + board.len()].copy_from_slice(board);
+    
+    rank_cards_naive(&cards)
+}
+
+#[inline]
+pub fn rank_cards_naive(hand: &[Card]) -> HandRank {
+    assert!(hand.len() >= 5 && hand.len() <= 7);
+
+    match hand.len() {
+        5 => rank_hand_5(&hand),
+        6..=7 => rank_hand_not_5(&hand),
+        _ => unreachable!(),
+    }
+}
+
+fn rank_hand_not_5(cards: &[Card]) -> HandRank {
 
     let mut rank_set = 0_u32;
     let mut suit_set = [0_u32; 4];
 
     let mut rank_to_count = [0_u8; 13];
-    let mut count_to_rank = [0_u32; 5];
-
-    // Add the cards in the hand to the set of cards.
-    rank_set |= 1 << (hand.0.rank() as u8);
-    rank_to_count[hand.0.rank() as usize] += 1;
-    suit_set[hand.0.suit() as usize] |= 1 << (hand.0.rank() as u8);
-
-    rank_set |= 1 << (hand.1.rank() as u8);
-    rank_to_count[hand.1.rank() as usize] += 1;
-    suit_set[hand.1.suit() as usize] |= 1 << (hand.1.rank() as u8);
+    let mut count_to_rank = [0_u32; 7];
 
     // Add the cards on the board to the set of cards.
-    for card in board.iter() {
+    for card in cards.iter() {
         rank_set |= 1 << (card.rank() as u8);
         rank_to_count[card.rank() as usize] += 1;
         suit_set[card.suit() as usize] |= 1 << (card.rank() as u8);
@@ -86,8 +99,8 @@ pub fn bits_hand_rank(hand: &Hand, board: &[Card]) -> HandRank {
 }
 
 // Faster version of bits_hand_rank that only works for 5 card hands.
-pub fn bits_hand_rank_5(hand: &Hand, board: &[Card]) -> HandRank {
-    assert!(board.len() == 3);
+fn rank_hand_5(cards: &[Card]) -> HandRank {
+    assert!(cards.len() == 5);
 
     let mut rank_set = 0_u32;
     let mut suit_set = 0_u32;
@@ -95,17 +108,8 @@ pub fn bits_hand_rank_5(hand: &Hand, board: &[Card]) -> HandRank {
     let mut rank_to_count = [0_u8; 13];
     let mut count_to_rank = [0_u32; 5];
 
-    // Add the cards in the hand to the set of cards.
-    suit_set |= 1 << (hand.0.suit() as u8);
-    rank_set |= 1 << (hand.0.rank() as u8);
-    rank_to_count[hand.0.rank() as usize] += 1;
-
-    suit_set |= 1 << (hand.1.suit() as u8);
-    rank_set |= 1 << (hand.1.rank() as u8);
-    rank_to_count[hand.1.rank() as usize] += 1;
-
     // Add the cards on the board to the set of cards.
-    for card in board.iter() {
+    for card in cards.iter() {
         suit_set |= 1 << (card.suit() as u8);
         rank_set |= 1 << (card.rank() as u8);
         rank_to_count[card.rank() as usize] += 1;
@@ -203,4 +207,9 @@ fn n_msb(r: u32, n: u32) -> u32 {
 #[inline]
 fn msb(r: u32) -> u32 {
     1 << (31 - r.leading_zeros())
+}
+
+#[cfg(test)]
+mod tests {
+
 }

@@ -3,21 +3,21 @@ use rand::prelude::*;
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy)]
 pub enum Suit { 
-    Hearts, 
-    Diamonds,
-    Clubs, 
+    Hearts,
     Spades,
+    Diamonds,
+    Clubs,
 }
 
-const SUITS: [Suit; 4] = [Suit::Clubs, Suit::Diamonds, Suit::Hearts, Suit::Spades];
+const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
 
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
         match value {
             0 => Suit::Hearts,
-            1 => Suit::Diamonds,
-            2 => Suit::Clubs,
-            3 => Suit::Spades,
+            1 => Suit::Spades,
+            2 => Suit::Diamonds,
+            3 => Suit::Clubs,
             _ => panic!("Invalid suit value: {}", value),
         }
     }
@@ -88,6 +88,26 @@ impl From<u8> for Rank {
     }
 }
 
+impl Rank {
+    pub fn prime(&self) -> u32 {
+        match self {
+            Rank::Two => 2,
+            Rank::Three => 3,
+            Rank::Four => 5,
+            Rank::Five => 7,
+            Rank::Six => 11,
+            Rank::Seven => 13,
+            Rank::Eight => 17,
+            Rank::Nine => 19,
+            Rank::Ten => 23,
+            Rank::Jack => 29,
+            Rank::Queen => 31,
+            Rank::King => 37,
+            Rank::Ace => 41,
+        }
+    }
+}
+
 impl Display for Rank {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
@@ -99,7 +119,7 @@ impl Display for Rank {
             Rank::Seven => write!(f, "7"),
             Rank::Eight => write!(f, "8"),
             Rank::Nine => write!(f, "9"),
-            Rank::Ten => write!(f, "10"),
+            Rank::Ten => write!(f, "T"),
             Rank::Jack => write!(f, "J"),
             Rank::Queen => write!(f, "Q"),
             Rank::King => write!(f, "K"),
@@ -108,12 +128,26 @@ impl Display for Rank {
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Default, Clone, Copy, Hash)]
 pub struct Card(u8);
 
 impl Card {
     pub fn new(rank: Rank, suit: Suit) -> Card {
         Card((rank as u8) << 4 | (suit as u8))
+    }
+
+    pub fn from_str(s: &str) -> Card {
+        s.into()
+    }
+
+    pub fn vec_from_str(s: &str) -> Vec<Card> {
+        s.split_whitespace().map(|s| s.into()).collect()
+    }
+
+    pub fn random<R: Rng>(rng: &mut R) -> Card {
+        let rank = rng.gen_range(0..13);
+        let suit = rng.gen_range(0..4);
+        Card::new(rank.into(), suit.into())
     }
 
     pub fn suit(&self) -> Suit {
@@ -133,6 +167,53 @@ impl Card {
             _ => self.rank() as u8 / 2,
         }
     }
+
+    //   For use in two-plus-two hand evaluator.
+    //   An integer is made up of four bytes.  The high-order
+    //   bytes are used to hold the rank bit pattern, whereas
+    //   the low-order bytes hold the suit/rank/prime value
+    //   of the card.
+    //
+    //   +--------+--------+--------+--------+
+    //   |xxxbbbbb|bbbbbbbb|cdhsrrrr|xxpppppp|
+    //   +--------+--------+--------+--------+
+    pub fn bit_mask(&self) -> u32 {
+        let p = self.rank().prime();
+        let r = (self.rank() as u32) << 8;
+        let suit : u32  = match self.suit() {
+            Suit::Hearts   => 0x1000,
+            Suit::Spades   => 0x2000,
+            Suit::Diamonds => 0x4000,
+            Suit::Clubs    => 0x8000,
+        };
+        let b = 1 << (self.rank() as i32 + 16);
+        b | suit | r | p        
+   }
+
+   pub fn from_bit_mask(mask: u32) -> Card {
+        let rank = ((mask & 0x00_00_0F_00) >> 8) as u8;
+        let suit = match mask & 0x00_00_F0_00 {
+            0x1000 => Suit::Hearts,
+            0x2000 => Suit::Spades,
+            0x4000 => Suit::Diamonds,
+            0x8000 => Suit::Clubs,
+            _ => panic!("Invalid suit value: {}", mask),
+        };
+        Card::new(rank.into(), suit)
+   }
+
+    // Idx in 2+2 hand evaluator lookup table.
+    #[inline]
+    pub fn idx(&self) -> usize {
+        (4 * (self.rank() as usize)) + (self.suit() as usize) + 1
+   }
+
+   #[inline]
+   pub fn from_idx(idx: usize) -> Card {
+        let rank = ((idx - 1) / 4) as u8;
+        let suit = ((idx - 1) % 4) as u8;
+        Card::new(rank.into(), suit.into())
+   }
 }
 
 impl Display for Card {
@@ -238,6 +319,15 @@ impl Deck {
     }
 }
 
+impl Iterator for Deck {
+    
+    type Item = Card;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.draw()
+    }
+}
+
 impl Index<usize> for Deck {
     type Output = Card;
 
@@ -285,12 +375,16 @@ mod tests {
 
     #[test]
     fn test_from_str() {
-        let card = Card::new(Rank::Ace, Suit::Hearts);
+        let card = Card::from_str("Ah");
         assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Hearts);
 
-        let card = Card::new(Rank::Two, Suit::Clubs);
+        let card = Card::from_str("2d");
         assert!(card.rank() == Rank::Two);
+        assert!(card.suit() == Suit::Diamonds);
+
+        let card = Card::from_str("Ac");
+        assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Clubs);
     }
 
@@ -300,6 +394,27 @@ mod tests {
         assert!(card.suit() as u8 == 0);
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
-        assert!(card.suit() as u8 == 2);
+        assert!(card.suit() as u8 == 3);
+    }
+
+    #[test]
+    fn test_mask_u32() {
+        assert_eq!(Card::from_str("5c").bit_mask(), 0b00000000_00001000_10000011_00000111);
+        assert_eq!(Card::from_str("Ah").bit_mask(), 0b00010000_00000000_00011100_00101001);
+
+        assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c"));
+        assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah"));
+    }
+
+    #[test]
+    fn test_card_idx() {
+        assert_eq!(Card::from_str("5c").idx(), 16);
+        assert_eq!(Card::from_str("Ah").idx(), 49);
+    }
+
+    #[test]
+    fn test_card_from_idx() {
+        assert_eq!(Card::from_idx(16), Card::from_str("5c"));
+        assert_eq!(Card::from_idx(49), Card::from_str("Ah"));
     }
 }
