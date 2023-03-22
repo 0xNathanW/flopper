@@ -1,4 +1,4 @@
-use std::{fmt::{Display, Debug}, ops::Index, option::Iter};
+use std::{fmt::{Display, Debug}, ops::Index};
 use rand::prelude::*;
 use thiserror::Error;
 
