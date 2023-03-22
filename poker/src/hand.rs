@@ -1,4 +1,6 @@
-use crate::card::{Card, Deck, Rank};
+use std::collections::{BTreeSet, HashSet};
+
+use crate::card::{Card, Deck, Rank, CardParseError};
 use thiserror::Error;
 use regex::Regex;
 
@@ -36,8 +38,11 @@ impl From<u16> for HandRank {
 pub enum HandParseError {
     #[error("Invalid number of cards in hand. expected 2")]
     InvalidNumberOfCards,
+    #[error("Card error: {0}")]
+    CardError(#[from] CardParseError),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct Hand(pub Card, pub Card);
 
 impl Hand {
@@ -52,16 +57,32 @@ impl Hand {
         let a = re.find_iter(s)
             .nth(0)
             .ok_or(HandParseError::InvalidNumberOfCards)?
-            .as_str()
-            .into();
+            .as_str();
+        let a = Card::from_str(a)?;
+
         let b = re.find_iter(s)
             .nth(1)
             .ok_or(HandParseError::InvalidNumberOfCards)?
-            .as_str()
-            .into();
-
+            .as_str();
+        let b = Card::from_str(b)?;
+        
         Ok(Hand(a, b))
     }   
+
+    pub fn all_hands() -> Vec<Hand> {
+        
+        let deck_1 = Deck::new();
+        let deck_2 = Deck::new();
+        let mut hands = Vec::new();
+
+        for i in 0..deck_1.len() {
+            for j in i+1..deck_2.len() {
+                hands.push(Hand(deck_1[i], deck_2[j]));
+            }
+        }
+
+        hands
+    }
 
     pub fn pocket_pair(&self) -> bool {
         self.0.rank() == self.1.rank()
@@ -86,28 +107,42 @@ impl Hand {
         high * (101 - high) / 2 + low - 1
     }
 
-    pub fn chen_strength(&self) -> u8 {
+    pub fn chen_score(&self) -> i32 {
         
-        let mut base = self.0.chen_score().max(self.1.chen_score());
-        let gap = (self.0.rank() as i8 - self.1.rank() as i8).abs() as u8;
+        let mut base = self.0.max(self.1).chen_score();
+        let gap = ((self.0.rank() as i8 - self.1.rank() as i8).abs() as u8).saturating_sub(1);
 
         if self.pocket_pair() {
-            base = 5.max(base * 2);
+            base = 5.0_f32.max(base * 2.0);
         }
         if self.suited() {
-            base += 2;
+            base += 2.0;
         }
 
-        match gap {
-            0 => {},
-            1 => base += 1,
-            2 => base -= 1,
-            3 => base -= 2,
-            4 => base -= 4,
-            _ => base -= 5,
-        }
+        // Subtract points if their is a gap between the two cards.
+        // Add 1 point if there is a 0 or 1 card gap and both cards are lower than a Q. (e.g. JT, 75, 32 etc, this bonus point does not apply to pocket pairs).
+        base -= match gap {
+            0 => 0.0,
+            1 => {
+                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+                    0.0
+                } else {
+                    1.0
+                }
+            },
+            2 => {
+                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+                    1.0
+                } else {
+                    2.0
+                }
+            },
+            3 => 4.0,
+            _ => 5.0,
+        };
 
-        base - gap
+        // Round up to the nearest integer.
+        base.ceil() as i32
     }
 }
 
@@ -164,14 +199,32 @@ mod tests {
     }
 
     #[test]
-    fn test_chen_strength() {
+    fn test_chen_score() {
         let hand = Hand::from_str("AhAc").unwrap();
-        assert_eq!(hand.chen_strength(), 20);
+        assert_eq!(hand.chen_score(), 20);
+
+        let hand = Hand::from_str("TcTd").unwrap();
+        assert_eq!(hand.chen_score(), 10);
+
+        let hand = Hand::from_str("5h7h").unwrap();
+        assert_eq!(hand.chen_score(), 6);
+
+        let hand = Hand::from_str("2c7h").unwrap();
+        assert_eq!(hand.chen_score(), -1);
+
+        let hand = Hand::from_str("AsKs").unwrap();
+        assert_eq!(hand.chen_score(), 12);
     }
 
     #[test]
     fn test_range_idx() {
         let hand = Hand::from_str("AsAc").unwrap();
         println!("{}", hand.range_idx());
+    }
+
+    #[test]
+    fn test_all_hands() {
+        let hands = Hand::all_hands();
+        assert_eq!(hands.len(), 1326);
     }
 }

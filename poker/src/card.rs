@@ -1,7 +1,18 @@
-use std::{fmt::{Display, Debug}, ops::Index};
+use std::{fmt::{Display, Debug}, ops::Index, option::Iter};
 use rand::prelude::*;
+use thiserror::Error;
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy)]
+#[derive(Error, Debug)]
+pub enum CardParseError {
+    #[error("Invalid rank: {0}. Expected one of 2-9, T, J, Q, K, A.")]
+    InvalidRank(char),
+    #[error("Invalid suit: {0}. Expected one of h, s, d, c.")]
+    InvalidSuit(char),
+    #[error("Invalid length: {0}. Expected 2.")]
+    InvalidLength(usize),
+}
+
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub enum Suit { 
     Hearts,
     Spades,
@@ -9,7 +20,7 @@ pub enum Suit {
     Clubs,
 }
 
-const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
+pub const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
 
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
@@ -19,6 +30,18 @@ impl From<u8> for Suit {
             2 => Suit::Diamonds,
             3 => Suit::Clubs,
             _ => panic!("Invalid suit value: {}", value),
+        }
+    }
+}
+
+impl Suit {
+    pub fn from_str(s: char) -> Result<Suit, CardParseError> {
+        match s {
+            'h' | 'H' => Ok(Suit::Hearts),
+            's' | 'S' => Ok(Suit::Spades),
+            'd' | 'D' => Ok(Suit::Diamonds),
+            'c' | 'C' => Ok(Suit::Clubs),
+            _ => Err(CardParseError::InvalidSuit(s)),
         }
     }
 }
@@ -34,7 +57,7 @@ impl Display for Suit {
     }
 }
 
-#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Copy, Clone, Hash)]
 pub enum Rank {
     Two,
     Three,
@@ -51,7 +74,7 @@ pub enum Rank {
     Ace,
 }
 
-const RANKS: [Rank; 13] = [
+pub const RANKS: [Rank; 13] = [
     Rank::Two,
     Rank::Three,
     Rank::Four,
@@ -106,6 +129,35 @@ impl Rank {
             Rank::Ace => 41,
         }
     }
+
+    pub fn from_str(s: char) -> Result<Rank, CardParseError> {
+        match s {
+            '2' => Ok(Rank::Two),
+            '3' => Ok(Rank::Three),
+            '4' => Ok(Rank::Four),
+            '5' => Ok(Rank::Five),
+            '6' => Ok(Rank::Six),
+            '7' => Ok(Rank::Seven),
+            '8' => Ok(Rank::Eight),
+            '9' => Ok(Rank::Nine),
+            't' | 'T' => Ok(Rank::Ten),
+            'j' | 'J' => Ok(Rank::Jack),
+            'q' | 'Q' => Ok(Rank::Queen),
+            'k' | 'K' => Ok(Rank::King),
+            'a' | 'A' => Ok(Rank::Ace),            
+            _ => Err(CardParseError::InvalidRank(s)),
+        }
+    }
+
+    pub fn chen_score(&self) -> f32 {
+        match &self {
+            Rank::Ace => 10.0,
+            Rank::King => 8.0,
+            Rank::Queen => 7.0,
+            Rank::Jack => 6.0,
+            _ => (self.clone() as u8 as f32 + 2.0) / 2.0,
+        }
+    }
 }
 
 impl Display for Rank {
@@ -136,12 +188,59 @@ impl Card {
         Card((rank as u8) << 4 | (suit as u8))
     }
 
-    pub fn from_str(s: &str) -> Card {
-        s.into()
+    pub fn from_str(s: &str) -> Result<Card, CardParseError> {
+
+        if s.len() != 2 {
+            return Err(CardParseError::InvalidLength(s.len()));
+        }
+        let mut chars = s.chars();
+        
+        let first = chars.next().unwrap();
+        let rank = match first {
+            '2' => Rank::Two,
+            '3' => Rank::Three,
+            '4' => Rank::Four,
+            '5' => Rank::Five,
+            '6' => Rank::Six,
+            '7' => Rank::Seven,
+            '8' => Rank::Eight,
+            '9' => Rank::Nine,
+            'T' | 't'  => Rank::Ten,
+            'J' | 'j'  => Rank::Jack,
+            'Q' | 'q'  => Rank::Queen,
+            'K' | 'k'  => Rank::King,
+            'A' | 'a'  => Rank::Ace,
+            _ => return Err(CardParseError::InvalidRank(first)),
+        };
+
+        let second = chars.next().unwrap();
+        let suit = match second{
+            'd' | 'D'  => Suit::Diamonds,
+            'h' | 'H'  => Suit::Hearts,
+            'c' | 'C'  => Suit::Clubs,
+            's' | 'S'  => Suit::Spades,
+            _ => return Err(CardParseError::InvalidSuit(second)),
+        };
+
+        Ok(Card::new(rank, suit))
     }
 
-    pub fn vec_from_str(s: &str) -> Vec<Card> {
-        s.split_whitespace().map(|s| s.into()).collect()
+    pub fn vec_from_str(s: &str) -> Result<Vec<Card>, CardParseError> {
+        let mut cards = Vec::new();
+        for card_str in s.split_whitespace() {
+            cards.push(Card::from_str(card_str)?);
+        }
+        Ok(cards)
+    }
+
+    pub fn all_cards() -> Vec<Card> {
+        let mut cards = Vec::new();
+        for rank in RANKS.iter() {
+            for suit in SUITS.iter() {
+                cards.push(Card::new(*rank, *suit));
+            }
+        }
+        cards
     }
 
     pub fn random<R: Rng>(rng: &mut R) -> Card {
@@ -158,14 +257,8 @@ impl Card {
         (self.0 >> 4).into()
     }
 
-    pub fn chen_score(&self) -> u8 {
-        match self.rank() {
-            Rank::Ace => 10,
-            Rank::King => 8,
-            Rank::Queen => 7,
-            Rank::Jack => 6,
-            _ => self.rank() as u8 / 2,
-        }
+    pub fn chen_score(&self) -> f32 {
+        self.rank().chen_score()
     }
 
     //   For use in two-plus-two hand evaluator.
@@ -249,43 +342,7 @@ impl Ord for Card {
     }
 }
 
-impl From<&str> for Card {
-    fn from(value: &str) -> Self {
-        
-        assert!(value.len() == 2, "Invalid card string: {}", value);
-        let mut chars = value.chars();
-
-        let rank = match chars.next().unwrap() {
-            '2' => Rank::Two,
-            '3' => Rank::Three,
-            '4' => Rank::Four,
-            '5' => Rank::Five,
-            '6' => Rank::Six,
-            '7' => Rank::Seven,
-            '8' => Rank::Eight,
-            '9' => Rank::Nine,
-            'T' | 't'  => Rank::Ten,
-            'J' | 'j'  => Rank::Jack,
-            'Q' | 'q'  => Rank::Queen,
-            'K' | 'k'  => Rank::King,
-            'A' | 'a'  => Rank::Ace,
-            // Regex should prevent this from happening.
-            _ => unreachable!("Invalid rank character: {}", value),
-        };
-
-        let suit = match chars.next().unwrap() {
-            'd' | 'D'  => Suit::Diamonds,
-            'h' | 'H'  => Suit::Hearts,
-            'c' | 'C'  => Suit::Clubs,
-            's' | 'S'  => Suit::Spades,
-            // Regex should prevent this from happening.
-            _ => unreachable!("Invalid suit character: {}", value),
-        };
-
-        Card::new(rank, suit)
-    }
-}
-
+#[derive(Debug, Clone)]
 pub struct Deck(Vec<Card>);
 
 impl Deck {
@@ -319,12 +376,13 @@ impl Deck {
     }
 }
 
-impl Iterator for Deck {
-    
+// Implement so that we can use .iter() to iterate over cards in deck.
+impl IntoIterator for Deck {
     type Item = Card;
+    type IntoIter = std::vec::IntoIter<Self::Item>;
 
-    fn next(&mut self) -> Option<Self::Item> {
-        self.draw()
+    fn into_iter(self) -> Self::IntoIter {
+        self.0.into_iter()
     }
 }
 
@@ -375,15 +433,15 @@ mod tests {
 
     #[test]
     fn test_from_str() {
-        let card = Card::from_str("Ah");
+        let card = Card::from_str("Ah").unwrap();
         assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Hearts);
 
-        let card = Card::from_str("2d");
+        let card = Card::from_str("2d").unwrap();
         assert!(card.rank() == Rank::Two);
         assert!(card.suit() == Suit::Diamonds);
 
-        let card = Card::from_str("Ac");
+        let card = Card::from_str("Ac").unwrap();
         assert!(card.rank() == Rank::Ace);
         assert!(card.suit() == Suit::Clubs);
     }
@@ -399,22 +457,22 @@ mod tests {
 
     #[test]
     fn test_mask_u32() {
-        assert_eq!(Card::from_str("5c").bit_mask(), 0b00000000_00001000_10000011_00000111);
-        assert_eq!(Card::from_str("Ah").bit_mask(), 0b00010000_00000000_00011100_00101001);
+        assert_eq!(Card::from_str("5c").unwrap().bit_mask(), 0b00000000_00001000_10000011_00000111);
+        assert_eq!(Card::from_str("Ah").unwrap().bit_mask(), 0b00010000_00000000_00011100_00101001);
 
-        assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c"));
-        assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah"));
+        assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c").unwrap());
+        assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah").unwrap());
     }
 
     #[test]
     fn test_card_idx() {
-        assert_eq!(Card::from_str("5c").idx(), 16);
-        assert_eq!(Card::from_str("Ah").idx(), 49);
+        assert_eq!(Card::from_str("5c").unwrap().idx(), 16);
+        assert_eq!(Card::from_str("Ah").unwrap().idx(), 49);
     }
 
     #[test]
     fn test_card_from_idx() {
-        assert_eq!(Card::from_idx(16), Card::from_str("5c"));
-        assert_eq!(Card::from_idx(49), Card::from_str("Ah"));
+        assert_eq!(Card::from_idx(16), Card::from_str("5c").unwrap());
+        assert_eq!(Card::from_idx(49), Card::from_str("Ah").unwrap());
     }
 }

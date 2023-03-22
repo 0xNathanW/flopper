@@ -188,6 +188,8 @@ fn find_straight(rank_set: u32) -> Option<u32> {
 
     if idx < 32 {
         Some(32 - 4 - idx)
+    } else if rank_set & 0b1_0000_0000_1111 == 0b1_0000_0000_1111 {
+        Some(0)
     } else {
         None
     }

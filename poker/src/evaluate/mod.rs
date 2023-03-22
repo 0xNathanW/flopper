@@ -41,7 +41,7 @@ mod test {
     fn board_from_str(board: &str) -> Vec<Card> {
         let mut cards = vec![];
         for card in board.split_whitespace() {
-            cards.push(Card::from_str(card));
+            cards.push(Card::from_str(card).unwrap());
         }
         cards
     }

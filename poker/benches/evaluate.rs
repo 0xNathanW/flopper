@@ -10,6 +10,7 @@ use poker::evaluate::{
 
 // Generate 100,000 random hands, making s.
 fn generate_hands() -> Vec<[Card; 7]> {
+    println!("Generating hands...");
     let mut rng = rand::thread_rng();
     let mut hands = Vec::with_capacity(100_000);
     for _ in 0..100_000 {
