@@ -1,4 +1,4 @@
-use std::{fmt::{Display, Debug}, ops::Index};
+use std::fmt::{Display, Debug};
 use rand::prelude::*;
 use thiserror::Error;
 
@@ -342,70 +342,9 @@ impl Ord for Card {
     }
 }
 
-#[derive(Debug, Clone)]
-pub struct Deck(Vec<Card>);
-
-impl Deck {
-    pub fn new() -> Deck {
-        let mut deck = Vec::new();
-        for suit in SUITS.iter() {
-            for rank in RANKS.iter() {
-                deck.push(Card::new(*rank, *suit));
-            }
-        }
-        Deck(deck)
-    }
-
-    pub fn new_shuffled() -> Deck {
-        let mut deck = Deck::new();
-        deck.shuffle();
-        deck
-    }
-
-    pub fn shuffle(&mut self) {
-        let mut rng = thread_rng();
-        self.0.shuffle(&mut rng);
-    }
-
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
-
-    pub fn draw(&mut self) -> Option<Card> {
-        self.0.pop()
-    }
-}
-
-// Implement so that we can use .iter() to iterate over cards in deck.
-impl IntoIterator for Deck {
-    type Item = Card;
-    type IntoIter = std::vec::IntoIter<Self::Item>;
-
-    fn into_iter(self) -> Self::IntoIter {
-        self.0.into_iter()
-    }
-}
-
-impl Index<usize> for Deck {
-    type Output = Card;
-
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_new_deck() {
-        let mut deck = Deck::new();
-        assert_eq!(deck.len(), 52);
-        deck.0.sort_by(|a, b| a.rank().cmp(&b.rank()));
-        assert!(deck[0].rank() == Rank::Two);
-        assert!(deck[51].rank() == Rank::Ace);
-    }
 
     #[test]
     fn test_ordering() {

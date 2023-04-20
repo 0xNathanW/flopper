@@ -210,8 +210,3 @@ fn n_msb(r: u32, n: u32) -> u32 {
 fn msb(r: u32) -> u32 {
     1 << (31 - r.leading_zeros())
 }
-
-#[cfg(test)]
-mod tests {
-
-}

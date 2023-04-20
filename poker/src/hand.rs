@@ -1,4 +1,5 @@
-use crate::card::{Card, Deck, Rank, CardParseError};
+use crate::card::{Card, Rank, CardParseError};
+use crate::deck::Deck;
 use thiserror::Error;
 use regex::Regex;
 
@@ -44,7 +45,7 @@ pub enum HandParseError {
 pub struct Hand(pub Card, pub Card);
 
 impl Hand {
-    pub fn deal(deck: &mut Deck) -> Hand {
+    pub fn deal(deck: &mut Deck<Card>) -> Hand {
         Hand(deck.draw().unwrap(), deck.draw().unwrap())
     }
 
@@ -69,8 +70,8 @@ impl Hand {
 
     pub fn all_hands() -> Vec<Hand> {
         
-        let deck_1 = Deck::new();
-        let deck_2 = Deck::new();
+        let deck_1 = Deck::<Card>::new();
+        let deck_2 = Deck::<Card>::new();
         let mut hands = Vec::new();
 
         for i in 0..deck_1.len() {
@@ -157,6 +158,20 @@ impl HandRank {
             HandRank::FourOfAKind(_) => HandRank::FourOfAKind(0),
             HandRank::StraightFlush(_) => HandRank::StraightFlush(0),
         }
+    }
+}
+
+pub trait HandCombos {
+    fn combos(&self) -> Vec<(usize, usize)>;
+
+    fn is_single_hand(&self) -> bool {
+        self.combos().len() == 1
+    }
+}
+
+impl HandCombos for Hand {
+    fn combos(&self) -> Vec<(usize, usize)> {
+        vec![(self.0.idx(), self.1.idx())]
     }
 }
 

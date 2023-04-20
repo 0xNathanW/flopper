@@ -83,12 +83,12 @@ impl Range {
 
                     match suitedness {
                         's' => {
-                            for rank in min_rank as u8..=max_rank as u8 {
+                            for rank in min_rank as u8..max_rank as u8 {
                                 hands.insert(RangeHand::Suited(max_rank, rank.into()));
                             }
                         },
                         'o' => {
-                            for rank in min_rank as u8..=max_rank as u8 {
+                            for rank in min_rank as u8..max_rank as u8 {
                                 hands.insert(RangeHand::Offsuit(max_rank, rank.into()));
                             }
                         },
@@ -160,12 +160,12 @@ impl Range {
 
                     match suitedness_1 {
                         's' => {
-                            for rank in min_rank_1 as u8 ..= min_rank_2 as u8 {
+                            for rank in min_rank_1 as u8..=min_rank_2 as u8 {
                                 hands.insert(RangeHand::Suited(max_rank_1, rank.into()));
                             }
                         },
                         'o' => {
-                            for rank in min_rank_1 as u8 ..= min_rank_2 as u8 {
+                            for rank in min_rank_1 as u8..=min_rank_2 as u8 {
                                 hands.insert(RangeHand::Offsuit(max_rank_1, rank.into()));
                             }
                         },

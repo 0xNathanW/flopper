@@ -431,6 +431,7 @@ version = "0.1.0"
 dependencies = [
  "criterion",
  "hex-literal",
+ "itertools",
  "md-5",
  "rand",
  "regex",

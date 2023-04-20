@@ -16,9 +16,12 @@ pub use two_plus_two::{
     rank_hand_two_plus_two,
     rank_cards_two_plus_two,
     rank_idx_two_plus_two,
-    load_lookup_table, 
+    rank_hand_5,
+    rank_hand_6,
+    rank_hand_7,
+    load_lookup_table,
     save_lookup_table,
-    generate_lookup_table
+    generate_lookup_table,
 };
 
 // Seperate tests for two_plus_two because it requires a lookup table.

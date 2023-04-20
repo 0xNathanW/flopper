@@ -1,7 +1,7 @@
 use std::{collections::{BTreeSet}, fmt::Debug};
 use rand::Rng;
 
-use crate::{card::{Rank, RANKS, Suit, Card}, hand::Hand};
+use crate::{card::{Rank, RANKS, Suit, Card, SUITS}, hand::{Hand, HandCombos}};
 
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Copy, PartialOrd, Ord)]
 pub enum RangeHand {
@@ -31,6 +31,7 @@ impl From<Hand> for RangeHand {
 }
 
 impl RangeHand {
+    
     pub fn chen_score(self) -> i32 {
         match self {
             
@@ -62,7 +63,7 @@ impl RangeHand {
 }
 
 pub struct Range {
-    pub name:       String,
+    pub name:           String,
     pub hands:          BTreeSet<RangeHand>,
     pub combo_counts:   Vec<(usize, RangeHand)>,
     pub total_combos:   usize,
@@ -119,6 +120,58 @@ impl Range {
                 Hand(Card::new(rank_1, suits.0), Card::new(rank_2, suits.1))
             }
         }
+    }
+}
+
+impl HandCombos for Range {
+    
+    fn combos(&self) -> Vec<(usize, usize)> {
+        let mut all = Vec::with_capacity(self.total_combos);
+        for hand in &self.hands {
+            match hand {
+                
+                RangeHand::Pair(rank) => {
+                    for i in 0..SUITS.len() {
+                        for j in i+1..SUITS.len() {
+                            all.push(
+                                (
+                                    Card::new(*rank, SUITS[i]).idx(),
+                                    Card::new(*rank, SUITS[j]).idx(),
+                                )
+                            );
+                        }
+                    }
+                },
+
+                RangeHand::Suited(rank_1, rank_2) => {
+                    for a in SUITS.iter() {
+                        all.push(
+                            (
+                                Card::new(*rank_1, *a).idx(),
+                                Card::new(*rank_2, *a).idx(),
+                            )
+                        );
+                    }
+                },
+
+                RangeHand::Offsuit(rank_1, rank_2) => {
+                    for a in SUITS.iter() {
+                        for b in SUITS.iter() {
+                            if a != b {
+                                all.push(
+                                    (
+                                        Card::new(*rank_1, *a).idx(),
+                                        Card::new(*rank_2, *b).idx(),
+                                    )
+                                );
+                            }
+                        }
+                    }
+                },
+            }
+        }
+        
+        all
     }
 }
 

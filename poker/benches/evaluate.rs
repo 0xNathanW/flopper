@@ -12,8 +12,8 @@ use poker::evaluate::{
 fn generate_hands() -> Vec<[Card; 7]> {
     println!("Generating hands...");
     let mut rng = rand::thread_rng();
-    let mut hands = Vec::with_capacity(100_000);
-    for _ in 0..100_000 {
+    let mut hands = Vec::with_capacity(10_000_000);
+    for _ in 0..10_000_000 {
         let mut hand = [Card::default(); 7];
         let mut seen = HashSet::with_capacity(7);
         for i in 0..7 {

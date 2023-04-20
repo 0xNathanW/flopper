@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::time;
-use poker::{card::Deck, hand::HandRank};
+use poker::card::Card;
+use poker::{deck::Deck, hand::HandRank};
 use poker::evaluate::{
     rank_bit_mask_senzee, 
     rank_idx_two_plus_two,
@@ -9,9 +10,8 @@ use poker::evaluate::{
 
 #[test]
 fn test_combo_5_senzee() {
-    let deck = Deck::new();
-    let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<u32>>();
-    
+    let cards = Deck::<u32>::new();
+
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let start = time::Instant::now();
 
@@ -56,7 +56,7 @@ fn test_combo_5_senzee() {
 fn test_combo_5_two_plus_two() {
     
     let lookup_table = load_lookup_table().unwrap();
-    let cards = Deck::new().into_iter().map(|c| c.idx()).collect::<Vec<usize>>(); 
+    let cards = Deck::<usize>::new();
     
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let mut hand = [0_usize; 5];
@@ -100,7 +100,7 @@ fn test_combo_5_two_plus_two() {
 #[test]
 fn test_combo_5_naive() {
 
-    let cards = Deck::new();
+    let cards = Deck::<Card>::new();
 
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let start = std::time::Instant::now();
@@ -149,8 +149,8 @@ fn test_eq() {
 
     let lookup_table = load_lookup_table().unwrap();
 
-    let cards = Deck::new();
-    let mut cards_idx = cards.clone().into_iter().map(|c| c.idx()).collect::<Vec<usize>>();
+    let cards = Deck::<Card>::new();
+    let mut cards_idx = cards.clone().as_ref().iter().map(|c| c.idx()).collect::<Vec<usize>>();
     cards_idx.reverse();
 
     let mut hand = [Card::default(); 5];

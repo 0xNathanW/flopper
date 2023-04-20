@@ -39,7 +39,7 @@ pub fn rank_idx_two_plus_two(hand: &[usize], lookup_table: &[i32]) -> HandRank {
 }
 
 #[inline]
-fn rank_hand_5(hand: &[usize], lookup_table: &[i32]) -> u16 {
+pub fn rank_hand_5(hand: &[usize], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0]] as usize;
     r = lookup_table[r + hand[1]] as usize;
     r = lookup_table[r + hand[2]] as usize;
@@ -50,7 +50,7 @@ fn rank_hand_5(hand: &[usize], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-fn rank_hand_6(hand: &[usize], lookup_table: &[i32]) -> u16 {
+pub fn rank_hand_6(hand: &[usize], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0]] as usize;
     r = lookup_table[r + hand[1]] as usize;
     r = lookup_table[r + hand[2]] as usize;
@@ -62,7 +62,7 @@ fn rank_hand_6(hand: &[usize], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-fn rank_hand_7(hand: &[usize], lookup_table: &[i32]) -> u16 {
+pub fn rank_hand_7(hand: &[usize], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0]] as usize;
     r = lookup_table[r + hand[1]] as usize;
     r = lookup_table[r + hand[2]] as usize;
@@ -76,7 +76,7 @@ fn rank_hand_7(hand: &[usize], lookup_table: &[i32]) -> u16 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::card::Deck;
+    use crate::deck::Deck;
     use crate::hand::HandRank;
     use std::collections::HashMap;
 
@@ -95,7 +95,7 @@ mod tests {
    fn test_combo_7_two_plus_two() {
     
     let lookup_table = setup_lookup_table();
-    let cards = Deck::new().into_iter().map(|c| c.idx()).collect::<Vec<usize>>(); 
+    let cards = Deck::<usize>::new();
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
 
     let mut hand = [0_usize; 7];
