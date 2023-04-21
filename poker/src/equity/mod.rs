@@ -2,6 +2,7 @@ use thiserror::Error;
 use crate::{deck::Deck, card::Card};
 
 mod enumerate;
+mod monte_carlo;
 
 pub use enumerate::equity_enumerate;
 
