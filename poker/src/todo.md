@@ -1,0 +1,6 @@
+ - Different Range inputs
+ - Optimise
+ - Progress bar
+ - Monte Carlo
+ - GUI
+ - WASM?
