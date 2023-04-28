@@ -1,5 +1,6 @@
 use crate::card::Card;
-use crate::hand::{HandRank, Hand};
+use crate::hand::Hand;
+use super::HandRank;
 
 pub fn rank_hand_naive(hand: &Hand, board: &[Card]) -> HandRank {
     assert!(board.len() >= 3 && board.len() <= 5);

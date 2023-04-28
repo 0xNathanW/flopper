@@ -1,17 +1,19 @@
 use std::collections::HashMap;
 use std::time;
 use poker::card::Card;
-use poker::{deck::Deck, hand::HandRank};
+use poker::deck::Deck;
 use poker::evaluate::{
+    HandRank,
+    rank_hand_7,
     rank_bit_mask_senzee, 
-    rank_idx_two_plus_two,
     load_lookup_table, rank_cards_naive, 
 };
 
 #[test]
 fn test_combo_7_senzee() {
 
-    let cards = Deck::<u32>::new();
+    let deck = Deck::new();
+    let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<u32>>();
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let mut hand = [0_u32; 7];
     let start = time::Instant::now();
@@ -61,10 +63,10 @@ fn test_combo_7_senzee() {
 fn test_combo_7_two_plus_two() {
 
     let lookup_table = load_lookup_table().unwrap();
-    let cards = Deck::<usize>::new(); 
+    let cards = Deck::new(); 
     
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-    let mut hand = [0_usize; 7];
+    let mut hand = [Card::default(); 7];
     let start = time::Instant::now();
 
     for a in 0..52 {
@@ -82,8 +84,9 @@ fn test_combo_7_two_plus_two() {
                                 hand[4] = cards[e];
                                 hand[5] = cards[f];
                                 hand[6] = cards[g];
-                                let rank = rank_idx_two_plus_two(&hand, &lookup_table);
-
+                                
+                                let rank_num = rank_hand_7(&hand, &lookup_table);
+                                let rank = HandRank::from(rank_num);
                                 rank_count
                                     .entry(HandRank::rank_variant(rank))
                                     .and_modify(|count| *count += 1)
@@ -111,7 +114,7 @@ fn test_combo_7_two_plus_two() {
 #[test]
 fn test_combo_7_naive() {
      
-    let cards = Deck::<Card>::new(); 
+    let cards = Deck::new(); 
     
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let mut hand = [Card::default(); 7];

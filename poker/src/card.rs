@@ -181,11 +181,17 @@ impl Display for Rank {
 }
 
 #[derive(Default, Clone, Copy, Hash)]
-pub struct Card(u8);
+pub struct Card(pub u8);
+
+impl From<u8> for Card {
+    fn from(value: u8) -> Self {
+        Card(value)
+    }
+}
 
 impl Card {
     pub fn new(rank: Rank, suit: Suit) -> Card {
-        Card((rank as u8) << 4 | (suit as u8))
+        Card(4 * (rank as u8) + (suit as u8))
     }
 
     pub fn from_str(s: &str) -> Result<Card, CardParseError> {
@@ -233,28 +239,16 @@ impl Card {
         Ok(cards)
     }
 
-    pub fn all_cards() -> Vec<Card> {
-        let mut cards = Vec::new();
-        for rank in RANKS.iter() {
-            for suit in SUITS.iter() {
-                cards.push(Card::new(*rank, *suit));
-            }
-        }
-        cards
-    }
-
     pub fn random<R: Rng>(rng: &mut R) -> Card {
-        let rank = rng.gen_range(0..13);
-        let suit = rng.gen_range(0..4);
-        Card::new(rank.into(), suit.into())
+        rng.gen_range(0..52).into()
     }
 
     pub fn suit(&self) -> Suit {
-        (self.0 & 0b0000_0011).into()
+        (self.0 % 4).into()
     }
 
     pub fn rank(&self) -> Rank {
-        (self.0 >> 4).into()
+        (self.0 / 4).into()
     }
 
     pub fn chen_score(&self) -> f32 {
@@ -271,6 +265,7 @@ impl Card {
     //   |xxxbbbbb|bbbbbbbb|cdhsrrrr|xxpppppp|
     //   +--------+--------+--------+--------+
     pub fn bit_mask(&self) -> u32 {
+
         let p = self.rank().prime();
         let r = (self.rank() as u32) << 8;
         let suit : u32  = match self.suit() {
@@ -280,6 +275,7 @@ impl Card {
             Suit::Clubs    => 0x8000,
         };
         let b = 1 << (self.rank() as i32 + 16);
+        
         b | suit | r | p        
    }
 
@@ -293,19 +289,6 @@ impl Card {
             _ => panic!("Invalid suit value: {}", mask),
         };
         Card::new(rank.into(), suit)
-   }
-
-    // Idx in 2+2 hand evaluator lookup table.
-    #[inline]
-    pub fn idx(&self) -> usize {
-        (4 * (self.rank() as usize)) + (self.suit() as usize) + 1
-   }
-
-   #[inline]
-   pub fn from_idx(idx: usize) -> Card {
-        let rank = ((idx - 1) / 4) as u8;
-        let suit = ((idx - 1) % 4) as u8;
-        Card::new(rank.into(), suit.into())
    }
 }
 
@@ -366,7 +349,7 @@ mod tests {
     }
 
     #[test]
-    fn test_size() {
+    fn test_mem_size() {
         assert!(std::mem::size_of::<Card>() == 1);
     }
 
@@ -401,17 +384,5 @@ mod tests {
 
         assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c").unwrap());
         assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah").unwrap());
-    }
-
-    #[test]
-    fn test_card_idx() {
-        assert_eq!(Card::from_str("5c").unwrap().idx(), 16);
-        assert_eq!(Card::from_str("Ah").unwrap().idx(), 49);
-    }
-
-    #[test]
-    fn test_card_from_idx() {
-        assert_eq!(Card::from_idx(16), Card::from_str("5c").unwrap());
-        assert_eq!(Card::from_idx(49), Card::from_str("Ah").unwrap());
     }
 }

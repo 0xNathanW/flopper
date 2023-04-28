@@ -441,6 +441,10 @@ dependencies = [
 [[package]]
 name = "gto"
 version = "0.1.0"
+dependencies = [
+ "poker",
+ "thiserror",
+]
 
 [[package]]
 name = "half"

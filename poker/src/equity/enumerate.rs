@@ -1,6 +1,6 @@
 use std::vec;
 use rayon::prelude::*;
-use crate::{card::Card, deck::Deck};
+use crate::{card::Card, deck::Deck, hand::Hand, range::Range};
 use crate::evaluate::{rank_hand_7, load_lookup_table};
 use super::{
     check_board, 
@@ -9,10 +9,10 @@ use super::{
     EquityResults
 };
 
-pub fn equity_enumerate(mut ranges: Vec<Vec<(usize, usize)>>, board: Vec<Card>) -> Result<EquityResults, EquityError> {
+pub fn equity_enumerate(ranges: Vec<Range>, board: Vec<Card>) -> Result<EquityResults, EquityError> {
 
     check_board(&board)?;
-    let (board, deck) = setup_cards(&mut ranges, board)?;
+    let (ranges, board, deck) = setup_cards(ranges, board)?;
 
     match board.len() {
         0 => enumerate_preflop(ranges, deck),
@@ -24,11 +24,11 @@ pub fn equity_enumerate(mut ranges: Vec<Vec<(usize, usize)>>, board: Vec<Card>) 
 }
 
 fn enumerate_hands(
-    ranges: &Vec<Vec<(usize, usize)>>,
+    ranges: &Vec<Vec<(Hand, f32)>>,
     range_idx: usize,
     used_cards: &mut u64,
-    hands: &mut Vec<(usize, usize)>,
-    board: &mut [usize; 7],
+    hands: &mut Vec<Hand>,
+    board: &mut [Card; 7],
     lookup_table: &[i32],
     results: &mut EquityResults,
 ) {
@@ -55,54 +55,56 @@ fn enumerate_hands(
         if best_idxs.len() == 1 {
             results.wins[best_idxs[0]] += 1;
         } else {
+            // print!("Tie (rank: {:?})", HandRank::from(best_rank));
             for idx in best_idxs {
+                // print!(" {:?}", hands[idx]);
                 // Ties need to be halved??
                 results.ties[idx] += 1;
             }
+            // println!();
         }
-
         results.total += 1;
         return;
     }
 
-    for hand in &ranges[range_idx] {
-        if *used_cards & (1 << hand.0) != 0 || *used_cards & (1 << hand.1) != 0 {
+    for (hand, _weight) in &ranges[range_idx] {
+        if *used_cards & (1 << hand.0.0) != 0 || *used_cards & (1 << hand.1.0) != 0 {
             continue;
         }
 
-        *used_cards |= 1 << hand.0;
-        *used_cards |= 1 << hand.1;
+        *used_cards |= 1 << hand.0.0;
+        *used_cards |= 1 << hand.1.0;
 
         hands.push(*hand);
         enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
         hands.pop();
 
-        *used_cards &= !(1 << hand.0);
-        *used_cards &= !(1 << hand.1);
+        *used_cards &= !(1 << hand.0.0);
+        *used_cards &= !(1 << hand.1.0);
     }
 }
 
 fn enumerate_board(
-    ranges: &Vec<Vec<(usize, usize)>>,
+    ranges: &Vec<Vec<(Hand, f32)>>,
     results: &mut EquityResults,
-    board: &mut [usize; 7],
+    board: &mut [Card; 7],
     lookup_table: &[i32],
 ) {
     let mut hands = Vec::with_capacity(ranges.len());
     let mut used_cards = 0_u64;
     for card in board[2..].iter() {
-        used_cards |= 1 << card;
+        used_cards |= 1 << card.0;
     }
 
     enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
 }
 
-fn enumerate_preflop(ranges: Vec<Vec<(usize, usize)>>, deck: Deck<usize>) -> Result<EquityResults, EquityError> {
+fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck) -> Result<EquityResults, EquityError> {
 
     let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
-        let mut cards = [0; 7];
+        let mut cards = [Card::default(); 7];
         let mut results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
@@ -135,14 +137,14 @@ fn enumerate_preflop(ranges: Vec<Vec<(usize, usize)>>, deck: Deck<usize>) -> Res
     Ok(total)
 }
 
-fn enumerate_flop(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>, deck: Deck<usize>) -> Result<EquityResults, EquityError> {
+fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: Vec<Card>, deck: Deck) -> Result<EquityResults, EquityError> {
 
     let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
-        let mut cards = [0; 7];
-        let mut results = EquityResults::new(ranges.len());
+        let mut cards = [Card::default(); 7];
         cards[2..5].copy_from_slice(&board);
+        let mut results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
 
@@ -165,12 +167,12 @@ fn enumerate_flop(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>, deck: Dec
     Ok(total)
 }
 
-fn enumerate_turn(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>, deck: Deck<usize>) -> Result<EquityResults, EquityError> {
+fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: Vec<Card>, deck: Deck) -> Result<EquityResults, EquityError> {
 
     let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
         
-        let mut cards = [0; 7];
+        let mut cards = [Card::default(); 7];
         let mut results = EquityResults::new(ranges.len());
         
         cards[2..6].copy_from_slice(&board);
@@ -189,11 +191,11 @@ fn enumerate_turn(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>, deck: Dec
     Ok(total)
 }
 
-fn enumerate_river(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>) -> Result<EquityResults, EquityError> {
+fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: Vec<Card>) -> Result<EquityResults, EquityError> {
 
     let lookup = load_lookup_table()?;
     let mut results = EquityResults::new(ranges.len());
-    let mut cards = [0; 7];
+    let mut cards = [Card::default(); 7];
     cards[2] = board[0];
     cards[3] = board[1];
     cards[4] = board[2];
@@ -207,25 +209,24 @@ fn enumerate_river(ranges: Vec<Vec<(usize, usize)>>, board: Vec<usize>) -> Resul
 
 #[cfg(test)]
 mod tests {
-    use std::vec;
-
     use super::*;
     use crate::equity::assert_results_eq;
-    use crate::hand::HandCombos;
     use crate::range::Range;
 
+    // Good.
     #[test]
     fn test_enumerate_river_heads_up() {
 
         let range_1 = Range::from_str("66+,A8s+,KTs+,QTs+,JTs,ATo+,KJo+").unwrap();
-        let range_2 = Range::from_str("22-99, A2o-A8o").unwrap();
-        let ranges = vec![range_1.combos(), range_2.combos()];
+        let range_2 = Range::from_str("22-99,A2o-A8o").unwrap();
+        let ranges = vec![range_1, range_2];
         let board = Card::vec_from_str("Qh 4h 8c Qc 6s").unwrap();
 
         let results = equity_enumerate(ranges, board).unwrap();
         assert_results_eq(&results, vec![56, 44]);
     }
 
+    // Ties are not working.
     #[test]
     fn test_enumerate_river_multi() {
         
@@ -233,12 +234,13 @@ mod tests {
         let range_2 = Range::from_str("66+,A8s+,KTs+,QTs+,JTs,ATo+,KJo+").unwrap();
         let range_3 = Range::from_str("22-TT,KTs+,QTs+,J9s+,T8s+,98s,87s,KJo+,QTo+,JTo,T9o,98o").unwrap();
 
-        let ranges = vec![range_1.combos(), range_2.combos(), range_3.combos()];
+        let ranges = vec![range_1, range_2, range_3];
         let board = Card::vec_from_str("6h 8s 4s 4d Qc").unwrap();
         
         let results = equity_enumerate(ranges, board).unwrap();
         assert_results_eq(&results, vec![13, 50, 37]);
     }
+
 
     #[test]
     fn test_enumerate_turn_multi() {
@@ -247,7 +249,7 @@ mod tests {
         let range_2 = Range::from_str("22-TT,K9s+,Q9s+,J8s+,T8s+,97s+,87s,76s,65s,KJo+,QTo+,JTo,T9o,98o").unwrap();
         let range_3 = Range::from_str("22+,A2s+,K2s+,Q2s+,J2s+,T5s+,96s+,87s,76s,A2o+,K3o+,Q6o+,J7o+,T8o+,97o+,87o").unwrap();
 
-        let ranges = vec![range_1.combos(), range_2.combos(), range_3.combos()];
+        let ranges = vec![range_1, range_2, range_3];
         let board = Card::vec_from_str("Td 6d Qc 8s").unwrap();
         
         let results = equity_enumerate(ranges, board).unwrap();
@@ -256,9 +258,9 @@ mod tests {
 
     #[test]
     fn test_enumerate_flop_heads_up() {
-        let range_1 = Range::from_str("88+,ATs+,KTs+,QJs,AJo+,KQo");
-        let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o");
-        let ranges = vec![range_1.unwrap().combos(), range_2.unwrap().combos()];
+        let range_1 = Range::from_str("88+,ATs+,KTs+,QJs,AJo+,KQo").unwrap();
+        let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o").unwrap();
+        let ranges = vec![range_1, range_2];
 
         let board = Card::vec_from_str("Qh 4h 8c").unwrap();
         let results = equity_enumerate(ranges, board).unwrap();
@@ -268,9 +270,9 @@ mod tests {
     #[test]
     fn test_enumerate_preflop_heads_up() {
 
-        let range_1 = Range::from_str("88+,ATs+,KTs+,QJs,AJo+,KQo");
-        let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o");
-        let ranges = vec![range_1.unwrap().combos(), range_2.unwrap().combos()];
+        let range_1 = Range::from_str("88+,ATs+,KTs+,QJs,AJo+,KQo").unwrap();
+        let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o").unwrap();
+        let ranges = vec![range_1, range_2];
 
         let results = equity_enumerate(ranges, vec![]).unwrap();
         assert_results_eq(&results, vec![67, 33]);

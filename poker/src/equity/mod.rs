@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::{deck::Deck, card::Card};
+use crate::{deck::Deck, card::Card, range::Range, hand::Hand};
 
 mod enumerate;
 mod monte_carlo;
@@ -58,38 +58,34 @@ impl EquityResults {
     pub fn tie_pct(&self) -> Vec<f64> {
         let mut tie_pct = vec![0.0; self.wins.len()];
         for i in 0..self.wins.len() {
-            tie_pct[i] = self.ties[i] as f64 / self.total as f64 * 100.0;
+            tie_pct[i] = self.ties[i] as f64 / self.total as f64 * 100.0 / 2.0;
         }
         tie_pct
     }
 }
 
 // Remove combos conflicting with board and dead cards.
-fn setup_cards(ranges: &mut Vec<Vec<(usize, usize)>>, board: Vec<Card>) -> Result<(Vec<usize>, Deck<usize>), EquityError> {
+fn setup_cards(ranges: Vec<Range>, board: Vec<Card>) -> Result<(Vec<Vec<(Hand, f32)>>, Vec<Card>, Deck), EquityError> {
     
-    let mut deck = Deck::<usize>::new();
+    let mut deck = Deck::new();
     let mut removed = 0_u64;
 
     let board = board
-        .iter()
+        .into_iter()
         .map(|card| {
-            let c = card.idx();
-            deck.remove_dead(c);
-            removed |= 1 << c;
-            c
+            deck.remove(&card);
+            removed |= 1 << card.0;
+            card
+        }).collect::<Vec<Card>>();
+        
+    let hands = ranges
+        .iter()
+        .map(|range| {
+            let hands = range.hand_combos_dead(removed);
+            hands
         }).collect();
 
-    for range in ranges.iter_mut() {
-        range.retain(|(i, j)| {
-            if removed & (1 << i) == 0 && removed & (1 << j) == 0 {
-                true
-            } else {
-                false
-            }            
-        }) 
-    }
-
-    Ok((board, deck))
+    Ok((hands, board, deck))
 }
 
 #[inline]

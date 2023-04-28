@@ -4,8 +4,7 @@ use prettytable::{Table, Row, Cell};
 use poker::{
     range::Range, 
     card::Card, 
-    equity::{equity_enumerate, EquityResults}, 
-    hand::HandCombos
+    equity::{equity_enumerate, EquityResults},
 };
 
 #[derive(Debug, Parser)]
@@ -27,7 +26,7 @@ fn main() -> Result<()> {
     let mut ranges = Vec::new();
     for (i, r) in args.ranges.iter().enumerate() {
         let range = Range::from_str(&r).with_context(|| format!("Failed to parse range number {}", i))?;
-        ranges.push(range.combos());
+        ranges.push(range);
     }
 
     let board = if let Some(b) = args.board {

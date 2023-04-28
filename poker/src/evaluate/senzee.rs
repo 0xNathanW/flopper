@@ -1,6 +1,5 @@
-use crate::{hand::{Hand, HandRank}, card::Card};
-
-use super::tables::*;
+use crate::{hand::Hand, card::Card};
+use super::{tables::*, HandRank};
 
 pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> HandRank {
     assert!(board.len() >= 3 && board.len() <= 5);

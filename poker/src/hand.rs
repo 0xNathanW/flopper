@@ -1,37 +1,6 @@
-use crate::card::{Card, Rank, CardParseError};
-use crate::deck::Deck;
 use thiserror::Error;
 use regex::Regex;
-
-#[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]
-pub enum HandRank {
-    HighCard(u32),
-    Pair(u32),
-    TwoPair(u32),
-    ThreeOfAKind(u32),
-    Straight(u32),
-    Flush(u32),
-    FullHouse(u32),
-    FourOfAKind(u32),
-    StraightFlush(u32),
-}
-
-impl From<u16> for HandRank {
-    fn from(value: u16) -> Self {
-        match value {
-            0..=1276 => HandRank::HighCard(value as u32),
-            1277..=4136 => HandRank::Pair(value as u32 - 1277),
-            4137..=4994 => HandRank::TwoPair(value as u32 - 4137),
-            4995..=5852 => HandRank::ThreeOfAKind(value as u32 - 4995),
-            5853..=5862 => HandRank::Straight(value as u32 - 5853),
-            5863..=7139 => HandRank::Flush(value as u32 - 5863),
-            7140..=7295 => HandRank::FullHouse(value as u32 - 7140),
-            7296..=7451 => HandRank::FourOfAKind(value as u32 - 7296),
-            7452..=7461 => HandRank::StraightFlush(value as u32 - 7452),
-            _ => panic!("Unexpected hand rank value! '{}'", value)
-        }
-    }
-}
+use crate::card::{Card, Rank, CardParseError};
 
 #[derive(Error, Debug)]
 pub enum HandParseError {
@@ -45,10 +14,6 @@ pub enum HandParseError {
 pub struct Hand(pub Card, pub Card);
 
 impl Hand {
-    pub fn deal(deck: &mut Deck<Card>) -> Hand {
-        Hand(deck.draw().unwrap(), deck.draw().unwrap())
-    }
-
     pub fn from_str(s: &str) -> Result<Hand, HandParseError> {
         
         let re = Regex::new(r"(?i)[2-9TJQKA][c|s|h|d]").unwrap();
@@ -68,21 +33,6 @@ impl Hand {
         Ok(Hand(a, b))
     }   
 
-    pub fn all_hands() -> Vec<Hand> {
-        
-        let deck_1 = Deck::<Card>::new();
-        let deck_2 = Deck::<Card>::new();
-        let mut hands = Vec::new();
-
-        for i in 0..deck_1.len() {
-            for j in i+1..deck_2.len() {
-                hands.push(Hand(deck_1[i], deck_2[j]));
-            }
-        }
-
-        hands
-    }
-
     pub fn pocket_pair(&self) -> bool {
         self.0.rank() == self.1.rank()
     }
@@ -97,13 +47,18 @@ impl Hand {
 
     // Returns index of hand in the range array.
     pub fn range_idx(&self) -> usize {
-        let (high, low): (usize, usize) = if self.0.rank() >= self.1.rank() {
-            (self.0.rank() as u8 as usize , self.1.rank() as u8 as usize)
-        } else {
-            (self.1.rank() as u8 as usize, self.0.rank() as u8 as usize)
-        };
-        
-        high * (101 - high) / 2 + low - 1
+        let (mut high, mut low) = (self.0.0, self.1.0);
+        if high < low {
+            std::mem::swap(&mut high, &mut low);
+        }
+
+        low as usize * (101 - low as usize) / 2 + high as usize - 1
+    }
+
+    pub fn from_range_idx(idx: usize) -> Hand {
+        let card1 = (103 - (103.0 * 103.0 - 8.0 * idx as f64).sqrt().ceil() as u16) / 2;
+        let card2 = idx as u16 - card1 * (101 - card1) / 2 + 1;
+        Hand(Card(card1 as u8), Card(card2 as u8))
     }
 
     pub fn chen_score(&self) -> i32 {
@@ -145,36 +100,6 @@ impl Hand {
     }
 }
 
-impl HandRank {
-    pub fn rank_variant(value: HandRank) -> HandRank {
-        match value {
-            HandRank::HighCard(_) => HandRank::HighCard(0),
-            HandRank::Pair(_) => HandRank::Pair(0),
-            HandRank::TwoPair(_) => HandRank::TwoPair(0),
-            HandRank::ThreeOfAKind(_) => HandRank::ThreeOfAKind(0),
-            HandRank::Straight(_) => HandRank::Straight(0),
-            HandRank::Flush(_) => HandRank::Flush(0),
-            HandRank::FullHouse(_) => HandRank::FullHouse(0),
-            HandRank::FourOfAKind(_) => HandRank::FourOfAKind(0),
-            HandRank::StraightFlush(_) => HandRank::StraightFlush(0),
-        }
-    }
-}
-
-pub trait HandCombos {
-    fn combos(&self) -> Vec<(usize, usize)>;
-
-    fn is_single_hand(&self) -> bool {
-        self.combos().len() == 1
-    }
-}
-
-impl HandCombos for Hand {
-    fn combos(&self) -> Vec<(usize, usize)> {
-        vec![(self.0.idx(), self.1.idx())]
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -205,13 +130,6 @@ mod tests {
     }
 
     #[test]
-    fn test_hand_rank_ord() {
-        assert!(HandRank::HighCard(1) > HandRank::HighCard(0));
-        assert!(HandRank::StraightFlush(5) > HandRank::HighCard(7));
-        assert!(HandRank::Pair(2) == HandRank::Pair(2));
-    }
-
-    #[test]
     fn test_chen_score() {
         let hand = Hand::from_str("AhAc").unwrap();
         assert_eq!(hand.chen_score(), 20);
@@ -230,14 +148,17 @@ mod tests {
     }
 
     #[test]
-    fn test_range_idx() {
-        let hand = Hand::from_str("AsAc").unwrap();
-        println!("{}", hand.range_idx());
-    }
-
-    #[test]
-    fn test_all_hands() {
-        let hands = Hand::all_hands();
-        assert_eq!(hands.len(), 1326);
+    fn test_hand_range_idx() {
+      
+        let mut idx = 0;
+        for i in 0..52_u8 {
+            for j in (i + 1)..52_u8 {
+                let hand = Hand(Card(i), Card(j));
+                assert_eq!(hand.range_idx(), idx);
+                let hand_inv = Hand(Card(j), Card(i));
+                assert_eq!(hand_inv.range_idx(), idx);
+                idx += 1;
+            }
+        }
     }
 }

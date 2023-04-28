@@ -1,16 +1,16 @@
-use std::collections::HashMap;
-use std::time;
-use poker::card::Card;
-use poker::{deck::Deck, hand::HandRank};
+use std::{collections::HashMap, time};
+use poker::{card::Card, deck::Deck};
 use poker::evaluate::{
     rank_bit_mask_senzee, 
-    rank_idx_two_plus_two,
+    rank_hand_5,
+    HandRank,
     load_lookup_table, rank_cards_naive, 
 };
 
 #[test]
 fn test_combo_5_senzee() {
-    let cards = Deck::<u32>::new();
+    let deck = Deck::new();
+    let cards = deck.into_iter().map(|card| card.bit_mask()).collect::<Vec<u32>>(); // convert to u32 for senzee's algo
 
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let start = time::Instant::now();
@@ -56,10 +56,10 @@ fn test_combo_5_senzee() {
 fn test_combo_5_two_plus_two() {
     
     let lookup_table = load_lookup_table().unwrap();
-    let cards = Deck::<usize>::new();
+    let cards = Deck::new();
     
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
-    let mut hand = [0_usize; 5];
+    let mut hand = [Card::default(); 5];
     
     let start = time::Instant::now();
     for a in 0..52 {
@@ -74,7 +74,8 @@ fn test_combo_5_two_plus_two() {
                         hand[3] = cards[d];
                         hand[4] = cards[e];
                         
-                        let rank = rank_idx_two_plus_two(&hand, &lookup_table);
+                        let rank_num = rank_hand_5(&hand, &lookup_table);
+                        let rank = HandRank::from(rank_num);
                         rank_count
                             .entry(HandRank::rank_variant(rank))
                             .and_modify(|count| *count += 1)
@@ -100,7 +101,7 @@ fn test_combo_5_two_plus_two() {
 #[test]
 fn test_combo_5_naive() {
 
-    let cards = Deck::<Card>::new();
+    let cards = Deck::new();
 
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
     let start = std::time::Instant::now();
@@ -140,54 +141,4 @@ fn test_combo_5_naive() {
     assert_eq!(*rank_count.get(&HandRank::FullHouse(0)).unwrap(), 3744);
     assert_eq!(*rank_count.get(&HandRank::FourOfAKind(0)).unwrap(), 624);
     assert_eq!(*rank_count.get(&HandRank::StraightFlush(0)).unwrap(), 40);
-}
-
-#[test]
-fn test_eq() {
-
-    use poker::card::Card;
-
-    let lookup_table = load_lookup_table().unwrap();
-
-    let cards = Deck::<Card>::new();
-    let mut cards_idx = cards.clone().as_ref().iter().map(|c| c.idx()).collect::<Vec<usize>>();
-    cards_idx.reverse();
-
-    let mut hand = [Card::default(); 5];
-    let mut hand2 = [0_usize; 5];
-
-    for a in 0..52 {
-        for b in (a + 1)..52 {
-            for c in (b + 1)..52 {
-                for d in (c + 1)..52 {
-                    for e in (d + 1)..52 {
-
-                        hand[0] = cards[a];
-                        hand[1] = cards[b];
-                        hand[2] = cards[c];
-                        hand[3] = cards[d];
-                        hand[4] = cards[e];
-
-                        hand2[0] = cards_idx[a];
-                        hand2[1] = cards_idx[b];
-                        hand2[2] = cards_idx[c];
-                        hand2[3] = cards_idx[d];
-                        hand2[4] = cards_idx[e];
-
-                        let rank = rank_cards_naive(&hand);
-                        let rank2 = rank_idx_two_plus_two(&hand2, &lookup_table);
-
-                        let naive_class = HandRank::rank_variant(rank);
-                        let two_plus_two_class = HandRank::rank_variant(rank2);
-                        
-                        if naive_class != two_plus_two_class {
-                            println!("{:?} != {:?}", naive_class, two_plus_two_class);
-                            println!("naive: {:?}", hand);
-                            println!("two_plus_two: {:?}", hand2.iter().map(|&c| Card::from_idx(c)).collect::<Vec<Card>>());
-                        }
-                    }
-                }
-            }
-        }
-    }
 }
