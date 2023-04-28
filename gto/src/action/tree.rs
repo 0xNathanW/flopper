@@ -1,29 +1,8 @@
 use std::sync::Mutex;
-
 use poker::card::Card;
 use thiserror::Error;
-use crate::bet_size::{Bets, BetParseError, BetSize};
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Street {
-    #[default]
-    Flop,
-    Turn,
-    River,
-}
-
-#[derive(Clone, Copy, Default, Debug, Eq, PartialEq, PartialOrd, Ord)]
-pub enum Action {
-    #[default]
-    None,
-    Fold,
-    Check,
-    Call,
-    Bet(u32),
-    Raise(u32),
-    AllIn(u32),
-    Chance(Card),
-}
+use super::bets::{BetParseError, BetSize};
+use super::{Street, Action, BetSizings};
 
 #[derive(Clone, Default, Debug)]
 pub struct TreeConfig {
@@ -38,7 +17,7 @@ pub struct TreeConfig {
     
     pub rake_cap: f32,
     
-    pub bet_sizings: Bets,
+    pub bet_sizings: BetSizings,
     
     pub add_all_in_threshold: f32,
 

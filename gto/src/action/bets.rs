@@ -2,15 +2,15 @@ use thiserror::Error;
 
 // Bet sizing of the two players.
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct Bets {
-    pub flop:  [BetSizings; 2],
-    pub turn:  [BetSizings; 2],
-    pub river: [BetSizings; 2],
+pub struct BetSizings {
+    pub flop:  [StreetBetSizings; 2],
+    pub turn:  [StreetBetSizings; 2],
+    pub river: [StreetBetSizings; 2],
 }
 
-// Contains available bet sizings.
+// Contains available bet sizings for a specific street.
 #[derive(Debug, Default, Clone, PartialEq)]
-pub struct BetSizings {
+pub struct StreetBetSizings {
     // Bet sizings.
     pub bet: Vec<BetSize>,
     // Raise sizings.
@@ -53,14 +53,14 @@ pub enum BetParseError {
     Custom(String),
 }
 
-impl BetSizings {
+impl StreetBetSizings {
 
-    pub fn from_str(bet_str: &str, raise_str: &str) -> Result<BetSizings, BetParseError> {
+    pub fn from_str(bet_str: &str, raise_str: &str) -> Result<StreetBetSizings, BetParseError> {
             
             let bet = parse_bets(bet_str, false)?;
             let raise = parse_bets(raise_str, true)?;
     
-            Ok(BetSizings { bet, raise })
+            Ok(StreetBetSizings { bet, raise })
     }
 }
 
@@ -162,8 +162,8 @@ mod tests {
         let bets = "allin, 150c , 50%, e";
         let raises = "allin, 10C , 70%, 2x, 2e200%";
 
-        let b = BetSizings::from_str(bets, raises).unwrap();
-        let expected = BetSizings {
+        let b = StreetBetSizings::from_str(bets, raises).unwrap();
+        let expected = StreetBetSizings {
             bet: vec![
                 BetSize::AllIn,
                 BetSize::Absolute(150),

@@ -1,4 +1,4 @@
-use gto::{bet_size::{BetSizings, Bets}, tree::{TreeConfig, Street, ActionTree}};
+use gto::action::{StreetBetSizings, ActionTree, TreeConfig, Street, BetSizings};
 // use poker::{range::Range, card::Card};
 
 fn main() {
@@ -7,9 +7,9 @@ fn main() {
     // let ip_range = Range::from_str("22-QQ,A2s-AQs,ATo+,K5s+,KJo+,Q8s+,J8s+,T7s+,96s+,86s+,75s+,64s+,53s+");
     // let board = Card::vec_from_str("Td 9d 6h Qc");
     
-    let sizings = BetSizings::from_str("60%, e, a", "2.5x").unwrap(); 
+    let sizings = StreetBetSizings::from_str("60%, e, a", "2.5x").unwrap(); 
     println!("{:#?}", sizings);
-    let bets = Bets {
+    let bets = BetSizings {
         flop: [sizings.clone(), sizings.clone()],
         turn: [sizings.clone(), sizings.clone()],
         river: [sizings.clone(), sizings.clone()],
