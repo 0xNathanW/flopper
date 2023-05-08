@@ -8,3 +8,4 @@ edition = "2021"
 [dependencies]
 poker = { path = "../poker" }
 thiserror = "1.0.39"
+rayon = "1.7.0"

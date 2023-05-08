@@ -1,15 +1,10 @@
 
 mod bets;
 mod tree;
+mod build_data;
+mod config;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum Street {
-    #[default]
-    Flop,
-    Turn,
-    River,
-}
-
+// Describes actions a player can take at a decision point.
 #[derive(Clone, Copy, Default, Debug, Eq, PartialEq, PartialOrd, Ord)]
 pub enum Action {
     #[default]
@@ -20,8 +15,9 @@ pub enum Action {
     Bet(u32),
     Raise(u32),
     AllIn(u32),
-    Chance(poker::card::Card),
+    Chance(u8),
 }
 
-pub use bets::{BetSizings, StreetBetSizings};
-pub use tree::{ActionTree, TreeConfig};
+pub use bets::{BetSizings, BetSizingsStreet, BetSize};
+pub use tree::{ActionTree, ActionTreeNode};
+pub use config::TreeConfig;

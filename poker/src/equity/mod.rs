@@ -16,9 +16,6 @@ pub enum EquityError {
 
     #[error("Error loading lookup table: {0}")]
     LookupTableError(#[from] std::io::Error),
-
-    #[error("Dead card on board: {0:?}")]
-    DeadBoardCard(Card),
 }
 
 // Results of player i at index i.
@@ -65,18 +62,15 @@ impl EquityResults {
 }
 
 // Remove combos conflicting with board and dead cards.
-fn setup_cards(ranges: Vec<Range>, board: Vec<Card>) -> Result<(Vec<Vec<(Hand, f32)>>, Vec<Card>, Deck), EquityError> {
+fn setup_cards(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck), EquityError> {
     
     let mut deck = Deck::new();
     let mut removed = 0_u64;
 
-    let board = board
-        .into_iter()
-        .map(|card| {
-            deck.remove(&card);
-            removed |= 1 << card.0;
-            card
-        }).collect::<Vec<Card>>();
+    board.iter().for_each(|card| {
+        deck.remove(card);
+        removed |= 1 << card.0;
+    });
         
     let hands = ranges
         .iter()
@@ -85,16 +79,7 @@ fn setup_cards(ranges: Vec<Range>, board: Vec<Card>) -> Result<(Vec<Vec<(Hand, f
             hands
         }).collect();
 
-    Ok((hands, board, deck))
-}
-
-#[inline]
-fn check_board(board: &Vec<Card>) -> Result<(), EquityError> {
-    if board.len() != 0 && board.len() != 3 && board.len() != 4 && board.len() != 5 {
-        return Err(EquityError::InvalidBoardSize(board.len()));
-    }
-
-    Ok(())
+    Ok((hands, deck))
 }
 
 #[cfg(test)]

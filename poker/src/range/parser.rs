@@ -1,7 +1,6 @@
 use thiserror::Error;
 use crate::card::{Rank, CardParseError};
-use super::Range;
-use super::range::{pair_idxs, suited_idxs, offsuit_idxs};
+use super::{Range, pair_idxs, suited_idxs, offsuit_idxs};
 
 #[derive(Error, Debug)]
 pub enum RangeParseError {
@@ -20,6 +19,9 @@ pub enum RangeParseError {
     
     #[error("Failed to parse weight: {0}")]
     WeightParseError(#[from] std::num::ParseFloatError),
+
+    #[error("Empty range")]
+    EmptyRange,
     
     #[error("Unexpected EOF")]
     UnexpectedEOF,
@@ -36,6 +38,10 @@ impl Range {
             name: input.to_string(),
             hands: [0.0; 1326],
         };
+
+        if input.len() == 0 {
+            return Err(RangeParseError::EmptyRange);
+        }
 
         if input.starts_with("[") {
             let mut chars = input.chars();
@@ -289,11 +295,24 @@ fn parse_weight(range: &mut Range, input: &str, weight: f32) -> Result<(), Range
 
 #[cfg(test)]
 mod tests {
-    use super::super::Range;
+    use crate::range::Range;
 
     #[test]
     fn test_parser() {
         let range = Range::from_str("[0.5]22+[/0.5][1.0]K2s+[/1.0][0.7]A7o+[/0.7]").unwrap();
         println!("{:?}", range);
+    }
+
+    #[test]
+    fn test_parser_error() {
+        
+        let cases = vec![
+            "",
+        ];
+
+        for t in cases {
+            let result = Range::from_str(t);
+            assert!(result.is_err());
+        }
     }
 }

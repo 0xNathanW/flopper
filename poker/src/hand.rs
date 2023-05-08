@@ -46,7 +46,7 @@ impl Hand {
     } 
 
     // Returns index of hand in the range array.
-    pub fn range_idx(&self) -> usize {
+    pub fn idx(&self) -> usize {
         let (mut high, mut low) = (self.0.0, self.1.0);
         if high < low {
             std::mem::swap(&mut high, &mut low);
@@ -55,10 +55,14 @@ impl Hand {
         low as usize * (101 - low as usize) / 2 + high as usize - 1
     }
 
-    pub fn from_range_idx(idx: usize) -> Hand {
+    pub fn from_idx(idx: usize) -> Hand {
         let card1 = (103 - (103.0 * 103.0 - 8.0 * idx as f64).sqrt().ceil() as u16) / 2;
         let card2 = idx as u16 - card1 * (101 - card1) / 2 + 1;
         Hand(Card(card1 as u8), Card(card2 as u8))
+    }
+
+    pub fn mask(&self) -> u64 {
+        (1 << self.0.0) | (1 << self.1.0)
     }
 
     pub fn chen_score(&self) -> i32 {
@@ -154,9 +158,9 @@ mod tests {
         for i in 0..52_u8 {
             for j in (i + 1)..52_u8 {
                 let hand = Hand(Card(i), Card(j));
-                assert_eq!(hand.range_idx(), idx);
+                assert_eq!(hand.idx(), idx);
                 let hand_inv = Hand(Card(j), Card(i));
-                assert_eq!(hand_inv.range_idx(), idx);
+                assert_eq!(hand_inv.idx(), idx);
                 idx += 1;
             }
         }

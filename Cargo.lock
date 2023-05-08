@@ -443,6 +443,7 @@ name = "gto"
 version = "0.1.0"
 dependencies = [
  "poker",
+ "rayon",
  "thiserror",
 ]
 

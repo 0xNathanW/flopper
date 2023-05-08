@@ -1,148 +1,24 @@
-use std::sync::Mutex;
-use poker::card::Card;
-use thiserror::Error;
-use super::bets::{BetParseError, BetSize};
-use super::{Street, Action, BetSizings};
+use std::fmt::Debug;
+use crate::{Street, player::*, ConfigError, latch::Latch};
+use super::{*, build_data::TreeBuildData, bets::BetSize};
 
-#[derive(Clone, Default, Debug)]
-pub struct TreeConfig {
-
-    pub initial_street: Street,
-    
-    pub starting_pot: u32,
-    
-    pub effective_stack: u32,
-    
-    pub rake: f32,
-    
-    pub rake_cap: f32,
-    
-    pub bet_sizings: BetSizings,
-    
-    pub add_all_in_threshold: f32,
-
-    pub force_all_in_threshold: f32,
-}
-
-#[derive(Error, Debug)]
-pub enum TreeConfigError {
-    #[error("Input number for {0} is invalid.")]
-    InvalidNumber(String),
-    #[error("Bet sizing error: {0}")]
-    BetSizing(#[from] BetParseError),
-}
-
-impl TreeConfig {
-
-    pub fn verify(&self) -> Result<(), TreeConfigError> {
-
-        if self.rake < 0.0 || self.rake > 1.0 {
-            return Err(TreeConfigError::InvalidNumber("Rake".to_string()));
-        }
-        if self.rake_cap < 0.0 {
-            return Err(TreeConfigError::InvalidNumber("Rake cap".to_string()));
-        }
-        if self.add_all_in_threshold < 0.0 {
-            return Err(TreeConfigError::InvalidNumber("Add all in threshold".to_string()));
-        }
-        if self.force_all_in_threshold < 0.0 {
-            return Err(TreeConfigError::InvalidNumber("Force all in threshold".to_string()));
-        }
-
-        Ok(())
-    }
-}
-
-#[derive(Debug, Default)]
+// The action tree represents the possible sequences of actions taken by players throughout the game. 
+// Each node in the action tree corresponds to a game state, and each edge represents an action taken by a player in that state.
+#[derive(Default, Debug)]
 pub struct ActionTree {
 
-    config:         TreeConfig,
+    pub config:         TreeConfig,
     
-    added_lines:    Vec<Vec<Action>>,
+    pub added_lines:    Vec<Vec<Action>>,
     
-    removed_lines:  Vec<Vec<Action>>,
+    pub removed_lines:  Vec<Vec<Action>>,
     
-    root:           Box<Mutex<ActionTreeNode>>,
+    pub root:           Box<Latch<ActionTreeNode>>,
     
-    history:        Vec<Action>,
+    pub history:        Vec<Action>,
 }
 
-#[derive(Debug, Default, Clone)]
-pub struct BuildTreeData {
-
-    last_action: Action,
-    
-    last_amount: u32,
-    
-    n_bets: u32,
-    
-    allin: bool,
-    
-    oop_call: bool, 
-    
-    stacks: [u32; 2],
-}
-
-impl BuildTreeData {
-
-    fn new(stack_size: u32) -> BuildTreeData {
-        BuildTreeData {
-            stacks: [stack_size, stack_size], 
-            ..Default::default()
-        }
-    }
-
-    fn next(&self, player: u8, action: Action) -> BuildTreeData {
-        
-        let mut n_bets = self.n_bets;
-        let mut allin = self.allin;
-        let mut stacks = self.stacks;
-        let mut last_amount = self.last_amount;
-        let mut oop_call = self.oop_call;
-
-        match action {
-            
-            Action::Check => oop_call = false,
-
-            Action::Call => {
-                n_bets = 0;
-                oop_call = player == PLAYER_OOP;
-                stacks[player as usize] = stacks[player as usize ^ 1];
-                last_amount = 0;
-            },
-
-            Action::Bet(n) | Action::Raise(n) | Action::AllIn(n) => {
-                let to_call = stacks[player as usize] - stacks[player as usize ^ 1];
-                n_bets += 1;
-                allin = matches!(action, Action::AllIn(_));
-                stacks[player as usize] -= n - last_amount + to_call;
-                last_amount = n;
-            }, 
-
-            _ => {},
-        }
-        
-        BuildTreeData {
-            last_action: action,
-            n_bets,
-            allin,
-            stacks,
-            last_amount,
-            oop_call,
-        }
-    }
-}
-
-const PLAYER_OOP: u8            = 0b0000_0000;
-const PLAYER_IP: u8             = 0b0000_0001;
-const PLAYER_CHANCE: u8         = 0b0000_0010;
-const PLAYER_MASK: u8           = 0b0000_0011;
-const PLAYER_CHANCE_FLAG: u8    = 0b0000_0100;
-const PLAYER_TERMINAL_FLAG: u8  = 0b0000_1000;
-const PLAYER_FOLD_FLAG: u8      = 0b0001_1000;
-
-
-#[derive(Debug, Default)]
+#[derive(Default, Debug)]
 pub struct ActionTreeNode {
     
     pub player: u8,
@@ -153,11 +29,11 @@ pub struct ActionTreeNode {
 
     pub actions: Vec<Action>,
 
-    pub children: Vec<Mutex<ActionTreeNode>>,
+    pub children: Vec<Latch<ActionTreeNode>>,
 }
 
 impl ActionTreeNode {
-
+    // At terminal nodes, no further actions are possible.
     pub fn is_terminal(&self) -> bool {
         self.player & PLAYER_TERMINAL_FLAG != 0
     }
@@ -166,12 +42,39 @@ impl ActionTreeNode {
         self.player & PLAYER_CHANCE_FLAG != 0
     }
 
+    fn num_nodes_internal(&self, total: &mut usize) {
+        *total += 1;
+        for child in self.children.iter() {
+            child.lock().num_nodes_internal(total);
+        }
+    }
+
+    fn print_node(&self, depth: usize, last_sibling: bool) {
+        for _ in 0..depth {
+            print!("│  ");
+        }
+
+        if last_sibling {
+            print!("└──");
+        } else {
+            print!("├──");
+        }
+
+        println!("[Player: {:#x}, Street: {:?}, Amount: {}, Actions: {:?}]", self.player, self.street, self.amount, self.actions);
+
+        let num_children = self.children.len();
+        for (i, child) in self.children.iter().enumerate() {
+            let is_last = i == num_children - 1;
+            child.lock().print_node(depth + 1, is_last);
+        }
+    }
 }
 
 impl ActionTree {
 
-    pub fn new(config: TreeConfig) -> Result<ActionTree, TreeConfigError> {
+    pub fn new(config: TreeConfig) -> Result<ActionTree, ConfigError> {
         
+        // Ensure valid config values.
         config.verify()?;
 
         let mut tree = ActionTree {
@@ -185,16 +88,18 @@ impl ActionTree {
 
     pub fn init_build(&mut self) {
 
-        let mut root = self.root.lock().unwrap();
+        // Initialise root node.
+        let mut root = self.root.lock();
         *root = ActionTreeNode::default();
         root.street = self.config.initial_street;
 
-        self.build_tree(&mut root, BuildTreeData::new(self.config.effective_stack));
+        self.build_tree(&mut root, TreeBuildData::new(self.config.effective_stack));
     }
 
-    pub fn build_tree(&self, node: &mut ActionTreeNode,data: BuildTreeData) {
-
-        if node.is_terminal() {
+    pub fn build_tree(&self, node: &mut ActionTreeNode,data: TreeBuildData) {
+        
+        if node.is_terminal() { 
+            // No further actions possible, base case.
             return;
         
         } else if node.is_chance() {
@@ -206,38 +111,38 @@ impl ActionTree {
                 Street::River => unreachable!("River is the last street."),
             };
 
-            let next_player = match (data.allin, node.street) {
+            let next_player = match (data.all_in, node.street) {
                 (false, _) => PLAYER_OOP,
                 (true, Street::Flop) => PLAYER_CHANCE_FLAG | PLAYER_CHANCE,
                 (true, _) => PLAYER_TERMINAL_FLAG,
             };
 
-            node.actions.push(Action::Chance(Card::default()));
-            node.children.push(Mutex::new(ActionTreeNode {
+            node.actions.push(Action::Chance(0));
+            node.children.push(Latch::new(ActionTreeNode {
                 player: next_player,
                 street: next_street,
                 amount: node.amount,
                 ..Default::default()
-            }));            
+            }));
 
-            self.build_tree(&mut node.children[0].lock().unwrap(), data.next(0, Action::Chance(Card::default())));
+            self.build_tree(&mut node.children[0].lock(), data.next(0, Action::Chance(0)));
         
         } else {
 
             self.push_actions(node, &data);
             for (action, child) in node.actions.iter().zip(node.children.iter()) {
-                self.build_tree(&mut child.lock().unwrap(), data.next(node.player, *action));
+                self.build_tree(&mut child.lock(), data.next(node.player, *action));
             }
         } 
     } 
 
     // All possible actions pushed to node.
-    fn push_actions(&self, node: &mut ActionTreeNode, data: &BuildTreeData) {
+    fn push_actions(&self, node: &mut ActionTreeNode, data: &TreeBuildData) {
         
         let player = node.player;
-        let player_stack = data.stacks[player as usize];
-        
         let opp = player ^ 1;
+        
+        let player_stack = data.stacks[player as usize];
         let opp_stack = data.stacks[opp as usize];
 
         let prev_amount = data.last_amount;
@@ -247,12 +152,15 @@ impl ActionTree {
         let max_amount = opp_stack + prev_amount;
         let min_amount = (prev_amount + to_call).clamp(1, max_amount);
 
-        let spr_after_call = opp_stack as f32 / pot as f32;
-        let fn_geometric = |n_streets: u32, max_ratio: f32| {
-            let ratio = ((2.0 * spr_after_call + 1.0).powf(1.0 / n_streets as f32) - 1.0) / 2.0;
-            (pot as f32 * ratio.min(max_ratio)).round() as u32
+        // Stack-to-pot ratio after call.
+        let spr_after_call = opp_stack as f64 / pot as f64;
+        // Calculate goeometric bet sizing.
+        let calc_geometric = |n_streets: u32, max_ratio: f64| {
+            let ratio = ((2.0 * spr_after_call + 1.0).powf(1.0 / n_streets as f64) - 1.0) / 2.0;
+            (pot as f64 * ratio.min(max_ratio)).round() as u32
         };
 
+        // Get bet size candidates.
         let (sizes, n_streets_left) = match node.street {
             Street::Flop =>  (&self.config.bet_sizings.flop,  3),
             Street::Turn =>  (&self.config.bet_sizings.turn,  2),
@@ -261,19 +169,20 @@ impl ActionTree {
 
         let mut actions = Vec::new();
 
+        // Not facing a bet.
         if matches!(data.last_action, Action::None | Action::Check | Action::Chance(_)) {
 
             // Check.
             actions.push(Action::Check);
 
-            // Bet.
-            for bet_size in sizes[player as usize].bet.iter() {
+            // Add available bet sizes to actions.
+            for &bet_size in sizes[player as usize].bet.iter() {
                 match bet_size {
 
-                    BetSize::Absolute(amount) => actions.push(Action::Bet(*amount)),
+                    BetSize::Absolute(amount) => actions.push(Action::Bet(amount)),
 
                     BetSize::PotScaled(ratio) => {
-                        let amount = (pot as f32 * ratio).round() as u32;
+                        let amount = (pot as f64 * ratio).round() as u32;
                         actions.push(Action::Bet(amount));
                     },
 
@@ -282,9 +191,9 @@ impl ActionTree {
                     BetSize::Geometric(n_streets, max_ratio) => {
                         let n_streets = match n_streets {
                             0 => n_streets_left,
-                            _ => *n_streets,
+                            _ => n_streets,
                         };
-                        let amount = fn_geometric(n_streets, *max_ratio);
+                        let amount = calc_geometric(n_streets, max_ratio);
                         actions.push(Action::Bet(amount));
                     },
 
@@ -293,10 +202,12 @@ impl ActionTree {
                 
             }
             
-            // All in.
-            if max_amount <= (pot as f32 * self.config.add_all_in_threshold).round() as u32 {
+            // Add allin if threshold as proportion of pot reached.
+            if max_amount <= (pot as f64 * self.config.add_all_in_threshold).round() as u32 {
                 actions.push(Action::AllIn(max_amount));
             }
+
+        // Facing bet.
         } else {
 
             // Fold.
@@ -305,31 +216,32 @@ impl ActionTree {
             // Call.
             actions.push(Action::Call);
 
-            if !data.allin {
+            if !data.all_in {
 
-                // Raise.
-                for bet_size in sizes[player as usize].raise.iter() {
+                // Can raise a non allin bet.
+                for &bet_size in sizes[player as usize].raise.iter() {
                     match bet_size {
 
+                        // TODO: Maybe change to additive.
+                        BetSize::Absolute(amount) => actions.push(Action::Raise(amount)),
+
                         BetSize::PotScaled(ratio) => {
-                            let amount = prev_amount + (pot as f32 * ratio).round() as u32; 
+                            let amount = prev_amount + (pot as f64 * ratio).round() as u32; 
                             actions.push(Action::Raise(amount));
                         },
 
                         BetSize::PrevScaled(ratio) => {
-                            let amount = (prev_amount as f32 * ratio).round() as u32;
+                            let amount = (prev_amount as f64 * ratio).round() as u32;
                             actions.push(Action::Raise(amount));
                         },
 
-                        // TODO: Maybe change.
-                        BetSize::Absolute(amount) => actions.push(Action::Raise(*amount)),
 
                         BetSize::Geometric(n_streets, max_ratio) => {
                             let n_streets = match n_streets {
-                                0 => (n_streets_left - data.n_bets + 1).max(1),
-                                _ => (*n_streets - data.n_bets + 1).max(1),
+                                0 => (n_streets_left - data.num_bets + 1).max(1),
+                                _ => (n_streets - data.num_bets + 1).max(1),
                             };
-                            let amount = fn_geometric(n_streets, *max_ratio);
+                            let amount = calc_geometric(n_streets, max_ratio);
                             actions.push(Action::Raise(prev_amount + amount));
                         },
 
@@ -337,8 +249,8 @@ impl ActionTree {
                     }
                 }
 
-                // All in.
-                let threshold = pot as f32 * self.config.add_all_in_threshold;
+                // All in if theshold reached.
+                let threshold = pot as f64 * self.config.add_all_in_threshold;
                 if max_amount <= prev_amount + threshold.round() as u32 {
                     actions.push(Action::AllIn(max_amount));
                 }
@@ -348,10 +260,12 @@ impl ActionTree {
         let breaks_threshold = |amount: u32| {
             let diff = amount - prev_amount;
             let new_pot = pot + 2 * diff;
-            let threshold = (new_pot as f32 * self.config.force_all_in_threshold).round() as u32;
+            let threshold = (new_pot as f64 * self.config.force_all_in_threshold).round() as u32;
             max_amount <= threshold + amount
         };
 
+        // Check if betting amounts break the force all-in threshold.
+        // Otherwise clamp bets between min and max amounts.
         for action in actions.iter_mut() {
             match *action {
 
@@ -378,12 +292,12 @@ impl ActionTree {
         }
 
         actions.sort_unstable();
-        actions.dedup();
+        actions.dedup(); // Remove duplicates.
 
         // TODO: merge close bets?
 
         let player_after_call = match node.street {
-            Street::River => PLAYER_TERMINAL_FLAG,
+            Street::River => PLAYER_TERMINAL_FLAG, // End of hand.
             _ => PLAYER_CHANCE_FLAG | player,
         };
 
@@ -415,7 +329,7 @@ impl ActionTree {
             };
 
             node.actions.push(action);
-            node.children.push(Mutex::new(ActionTreeNode {
+            node.children.push(Latch::new(ActionTreeNode {
                 player: next_player,
                 street: node.street,
                 amount,
@@ -425,5 +339,45 @@ impl ActionTree {
 
         node.actions.shrink_to_fit();
         node.children.shrink_to_fit();
+    }
+
+    pub fn num_nodes(&self) -> usize {
+        let mut total = 0;
+        self.root.lock().num_nodes_internal(&mut total);
+        total
+    }
+
+    // Print nodes in a tree-like structure.
+    pub fn print_nodes(&self) {
+        self.root.lock().print_node(0, false);
+    }
+
+    // Search for invalid terminal nodes, should return empty vec.
+    pub fn invalid_terminals(&self) -> Vec<Vec<Action>> {
+        let mut ret = Vec::new();
+        let mut line = Vec::new();
+        Self::invalid_terminals_internal(&self.root.lock(), &mut ret, &mut line);
+        ret
+    }
+
+    fn invalid_terminals_internal(
+        node: &ActionTreeNode,
+        result: &mut Vec<Vec<Action>>,
+        line: &mut Vec<Action>,
+    ) {
+        if node.is_terminal() {
+            // Base case.
+        } else if node.children.is_empty() {
+            // Final node not registered as terminal is invalid.
+            result.push(line.clone());
+        } else if node.is_chance() {
+            Self::invalid_terminals_internal(&node.children[0].lock(), result, line)
+        } else {
+            for (&action, child) in node.actions.iter().zip(node.children.iter()) {
+                line.push(action);
+                Self::invalid_terminals_internal(&child.lock(), result, line);
+                line.pop();
+            }
+        }
     }
 }

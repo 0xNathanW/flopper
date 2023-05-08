@@ -1,17 +1,5 @@
 use crate::card::Card;
-use crate::hand::Hand;
 use super::HandRank;
-
-pub fn rank_hand_naive(hand: &Hand, board: &[Card]) -> HandRank {
-    assert!(board.len() >= 3 && board.len() <= 5);
-
-    let mut cards = [Card::default(); 7];
-    cards[0] = hand.0;
-    cards[1] = hand.1;
-    cards[2..2 + board.len()].copy_from_slice(board);
-    
-    rank_cards_naive(&cards)
-}
 
 #[inline]
 pub fn rank_cards_naive(hand: &[Card]) -> HandRank {

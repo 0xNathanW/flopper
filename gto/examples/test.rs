@@ -1,14 +1,18 @@
-use gto::action::{StreetBetSizings, ActionTree, TreeConfig, Street, BetSizings};
-// use poker::{range::Range, card::Card};
+use gto::game::Game;
+use gto::{Street, solve::solve};
+use gto::action::{BetSizingsStreet, ActionTree, TreeConfig, BetSizings};
+use gto::postflop::PostFlopGame;
+use poker::Board;
+use poker::range::Range;
 
 fn main() {
 
-    // let oop_range = Range::from_str("66+,A8s+,A4s-A5s,AJo+,K9s+,KQo,QTs+,JTs,96s+,85s+,75s+,65s,54s");
-    // let ip_range = Range::from_str("22-QQ,A2s-AQs,ATo+,K5s+,KJo+,Q8s+,J8s+,T7s+,96s+,86s+,75s+,64s+,53s+");
-    // let board = Card::vec_from_str("Td 9d 6h Qc");
+    let oop_range = Range::from_str("66+,A8s+,A4s-A5s,AJo+,K9s+,KQo,QTs+,JTs,96s+,85s+,75s+,65s,54s").unwrap();
+    let ip_range = Range::from_str("22-QQ,A2s-AQs,ATo+,K5s+,KJo+,Q8s+,J8s+,T7s+,96s+,86s+,75s+,64s+,53s+").unwrap();
+    let board = Board::from_str("Td 9d 6h Qc").unwrap();
     
-    let sizings = StreetBetSizings::from_str("60%, e, a", "2.5x").unwrap(); 
-    println!("{:#?}", sizings);
+    let sizings = BetSizingsStreet::from_str("60%, e, a", "2.5x").unwrap(); 
+
     let bets = BetSizings {
         flop: [sizings.clone(), sizings.clone()],
         turn: [sizings.clone(), sizings.clone()],
@@ -27,6 +31,15 @@ fn main() {
     };
 
     let tree = ActionTree::new(tree_config).unwrap();
-    println!("{:#?}", tree);
+    let mut game = PostFlopGame::new([oop_range, ip_range], board,tree).unwrap();
+    let root = game.root();
     
+    // let (uncompressed, compressed) = game.memory_usage();
+    // println!("Uncompressed mem usage {} bytes", uncompressed);
+    // println!("Compressed mem usage {} bytes", compressed);
+    
+    game.allocate_memory(false);
+
+    let target_exploitability = game.tree_config().starting_pot as f32 * 0.005;
+    solve(&mut game, 1000, target_exploitability);
 }

@@ -3,10 +3,7 @@ mod two_plus_two;
 mod senzee;
 mod tables;
 
-pub use naive::{
-    rank_hand_naive, 
-    rank_cards_naive
-};
+pub use naive::rank_cards_naive;
 pub use senzee::{
     rank_hand_senzee, 
     rank_cards_senzee, 

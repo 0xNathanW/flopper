@@ -4,7 +4,7 @@ use prettytable::{Table, Row, Cell};
 use poker::{
     range::Range, 
     card::Card, 
-    equity::{equity_enumerate, EquityResults},
+    equity::{equity_enumerate, EquityResults}, board::Board,
 };
 
 #[derive(Debug, Parser)]
@@ -30,9 +30,9 @@ fn main() -> Result<()> {
     }
 
     let board = if let Some(b) = args.board {
-        Card::vec_from_str(&b).context("Failed to parse board")?
+        Board::from_str(&b)?
     } else {
-        Vec::new()
+        Board::default()
     };
 
     let results = equity_enumerate(ranges, board).context("Failed to calculate equity")?;
