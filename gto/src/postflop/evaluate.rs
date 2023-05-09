@@ -97,11 +97,6 @@ impl PostFlopGame {
             let valid_player_strength = &player_strength[1..player_strength.len() - 1];       
             let mut i = 1;
 
-            dbg!(hand_strength.len());
-            dbg!(player_strength.len());
-            dbg!(opp_strength.len());
-            dbg!(valid_player_strength.len());
-
             for &(strength, idx) in valid_player_strength {
                 unsafe{
                     while opp_strength.get_unchecked(i).0 < strength {
@@ -118,7 +113,7 @@ impl PostFlopGame {
 
                         i += 1;
                     }
-
+                    
                     let hand = *player_cards.get_unchecked(idx as usize);
                     let cf_reach = cf_reach_sum 
                         - cf_reach_minus.get_unchecked(hand.0.0 as usize)
@@ -147,12 +142,12 @@ impl PostFlopGame {
 
                         i -= 1;
                     }
-
+                    
                     let hand = *player_cards.get_unchecked(idx as usize);
                     let cf_reach = cf_reach_sum 
                         - cf_reach_minus.get_unchecked(hand.0.0 as usize)
                         - cf_reach_minus.get_unchecked(hand.1.0 as usize);
-                    *result.get_unchecked_mut(idx as usize) = (amount_win * cf_reach) as f32;
+                    *result.get_unchecked_mut(idx as usize) += (amount_lose * cf_reach) as f32;
                 }
             }
             

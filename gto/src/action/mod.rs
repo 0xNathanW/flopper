@@ -12,9 +12,9 @@ pub enum Action {
     Fold,
     Check,
     Call,
-    Bet(u32),
-    Raise(u32),
-    AllIn(u32),
+    Bet(i32),
+    Raise(i32),
+    AllIn(i32),
     Chance(u8),
 }
 

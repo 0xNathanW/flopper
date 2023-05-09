@@ -126,7 +126,6 @@ pub fn compute_optimal_cfv<G: Game>(
         unsafe { cfv_actions.set_len(num_actions * num_hands) };
         sum_slices_uninit(result, &cfv_actions);
     }
-
 }
 
 pub fn compute_cfv<G: Game>(
@@ -303,7 +302,7 @@ pub fn compute_cfv<G: Game>(
     }
 }
 
-fn normalised_stategy_compressed(strategy: &[u16], num_actions: usize) -> Vec<f32> {
+pub fn normalised_stategy_compressed(strategy: &[u16], num_actions: usize) -> Vec<f32> {
 
     let mut normalised = Vec::with_capacity(strategy.len());
     let uninit = normalised.spare_capacity_mut();
@@ -326,7 +325,7 @@ fn normalised_stategy_compressed(strategy: &[u16], num_actions: usize) -> Vec<f3
     normalised
 }
 
-fn normalised_strategy(strategy: &[f32], num_actions: usize) -> Vec<f32> {
+pub fn normalised_strategy(strategy: &[f32], num_actions: usize) -> Vec<f32> {
 
     let mut normalised = Vec::with_capacity(strategy.len());
     let uninit = normalised.spare_capacity_mut();
@@ -347,10 +346,3 @@ fn normalised_strategy(strategy: &[f32], num_actions: usize) -> Vec<f32> {
     normalised
 }
 
-fn apply_locking_strategy(dst: &mut [f32], locking: &[f32]) {
-    if !locking.is_empty() {
-        dst.iter_mut().zip(locking).for_each(|(d, s)| {
-            *d *= *s;
-        });
-    }    
-}

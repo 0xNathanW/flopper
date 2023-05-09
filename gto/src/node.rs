@@ -7,7 +7,7 @@ pub trait GameNode: Send + Sync {
     
     // Perform an operation on each child node.
     fn child_op<OP: Fn(usize) + Sync + Send>(&self, op: OP) {
-        self.action_idxs().into_iter().for_each(op)
+        self.action_idxs().into_par_iter().for_each(op)
     }
 
     fn is_terminal(&self) -> bool;

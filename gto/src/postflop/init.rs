@@ -54,6 +54,7 @@ impl PostFlopGame {
         // Initiate fields from config.
         game.state          = ProcessState::ConfigError; // Will change as game tree is buil
         game.board          = board;
+        game.ranges         = ranges;
         game.tree_config    = action_tree.config;
         game.added_lines    = action_tree.added_lines;
         game.removed_lines  = action_tree.removed_lines;
@@ -62,7 +63,7 @@ impl PostFlopGame {
         // Set initial weights and private cards.
         for player in 0..2 {
             // Get all possible hands excluding board cards.
-            let combos = ranges[player].hand_combos_dead(game.board.mask());
+            let combos = game.ranges[player].hand_combos_dead(game.board.mask());
             let (hands, weights) = combos.into_iter().unzip();
             game.initial_weights[player] = weights;
             game.hands[player] = hands;
@@ -109,7 +110,7 @@ impl PostFlopGame {
             vec![0.0; game.num_private_hands(0)],
             vec![0.0; game.num_private_hands(1)],
         ];
-        game.weights = v.clone();
+        game.weights = v.clone(); 
         game.normalised_weights = v.clone();
         game.cf_values_cache = v.clone();
         
@@ -166,9 +167,9 @@ impl PostFlopGame {
         let flop_mask = self.board.flop_mask();
         let mut hand_strengths = vec![Default::default(); 1326];
         let cards = [
-            self.board.flop[0],
-            self.board.flop[1],
             self.board.flop[2],
+            self.board.flop[1],
+            self.board.flop[0],
             Card::default(),
             Card::default(),
             Card::default(),
@@ -199,27 +200,24 @@ impl PostFlopGame {
                         strength[player].push((0, 0));
                         strength[player].push((u16::MAX, u16::MAX));
 
-                        strength[player].extend(
-                            self.hands[player].iter().enumerate().filter_map(
-                                |(idx, hand)| {
-
-                                    if cards.contains(&hand.0) || cards.contains(&hand.1) {
-                                        None
-
-                                    } else {
-                                        cards[5] = hand.0;
-                                        cards[6] = hand.1;
-                                        let rank = rank_hand_7(&cards, &lookup_table);
-                                        Some((rank + 1, idx as u16))
-                                    }
-                            })
-                        );
+                        for (idx, &hand) in self.hands[player].iter().enumerate() {
+                            if cards.contains(&hand.0) || cards.contains(&hand.1) {
+                                continue;
+                            } else {
+                                cards[5] = hand.0;
+                                cards[6] = hand.1;
+                                let rank = rank_hand_7(&cards, &lookup_table);
+                                strength[player].push((rank + 1, idx as u16));
+                                // dbg!(strength[player].len());
+                                cards[5] = Card::default();
+                                cards[6] = Card::default();
+                            }
+                        } 
 
                         strength[player].shrink_to_fit();
-                        strength[player].sort_unstable_by(|a, b| b.0.cmp(&a.0));
+                        strength[player].sort_unstable();
                     }
 
-                    println!("{} {}", Card(t), Card(r));
                     hand_strengths[Hand(Card(t), Card(r)).idx()] = strength;
                 }
             }

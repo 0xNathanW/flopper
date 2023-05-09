@@ -25,7 +25,7 @@ pub struct ActionTreeNode {
 
     pub street: Street,
 
-    pub amount: u32,
+    pub amount: i32,
 
     pub actions: Vec<Action>,
 
@@ -155,9 +155,9 @@ impl ActionTree {
         // Stack-to-pot ratio after call.
         let spr_after_call = opp_stack as f64 / pot as f64;
         // Calculate goeometric bet sizing.
-        let calc_geometric = |n_streets: u32, max_ratio: f64| {
+        let calc_geometric = |n_streets: i32, max_ratio: f64| {
             let ratio = ((2.0 * spr_after_call + 1.0).powf(1.0 / n_streets as f64) - 1.0) / 2.0;
-            (pot as f64 * ratio.min(max_ratio)).round() as u32
+            (pot as f64 * ratio.min(max_ratio)).round() as i32
         };
 
         // Get bet size candidates.
@@ -182,7 +182,7 @@ impl ActionTree {
                     BetSize::Absolute(amount) => actions.push(Action::Bet(amount)),
 
                     BetSize::PotScaled(ratio) => {
-                        let amount = (pot as f64 * ratio).round() as u32;
+                        let amount = (pot as f64 * ratio).round() as i32;
                         actions.push(Action::Bet(amount));
                     },
 
@@ -203,7 +203,7 @@ impl ActionTree {
             }
             
             // Add allin if threshold as proportion of pot reached.
-            if max_amount <= (pot as f64 * self.config.add_all_in_threshold).round() as u32 {
+            if max_amount <= (pot as f64 * self.config.add_all_in_threshold).round() as i32 {
                 actions.push(Action::AllIn(max_amount));
             }
 
@@ -226,12 +226,12 @@ impl ActionTree {
                         BetSize::Absolute(amount) => actions.push(Action::Raise(amount)),
 
                         BetSize::PotScaled(ratio) => {
-                            let amount = prev_amount + (pot as f64 * ratio).round() as u32; 
+                            let amount = prev_amount + (pot as f64 * ratio).round() as i32; 
                             actions.push(Action::Raise(amount));
                         },
 
                         BetSize::PrevScaled(ratio) => {
-                            let amount = (prev_amount as f64 * ratio).round() as u32;
+                            let amount = (prev_amount as f64 * ratio).round() as i32;
                             actions.push(Action::Raise(amount));
                         },
 
@@ -251,16 +251,16 @@ impl ActionTree {
 
                 // All in if theshold reached.
                 let threshold = pot as f64 * self.config.add_all_in_threshold;
-                if max_amount <= prev_amount + threshold.round() as u32 {
+                if max_amount <= prev_amount + threshold.round() as i32 {
                     actions.push(Action::AllIn(max_amount));
                 }
             }
         }
 
-        let breaks_threshold = |amount: u32| {
+        let breaks_threshold = |amount: i32| {
             let diff = amount - prev_amount;
             let new_pot = pot + 2 * diff;
-            let threshold = (new_pot as f64 * self.config.force_all_in_threshold).round() as u32;
+            let threshold = (new_pot as f64 * self.config.force_all_in_threshold).round() as i32;
             max_amount <= threshold + amount
         };
 

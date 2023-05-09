@@ -7,20 +7,20 @@ pub struct TreeBuildData {
 
     pub last_action: Action,
     
-    pub last_amount: u32,
+    pub last_amount: i32,
     
-    pub num_bets: u32,
+    pub num_bets: i32,
     
     pub all_in: bool, 
     
     pub oop_call: bool, 
     
-    pub stacks: [u32; 2],
+    pub stacks: [i32; 2],
 }
 
 impl TreeBuildData {
 
-    pub fn new(stack_size: u32) -> TreeBuildData {
+    pub fn new(stack_size: i32) -> TreeBuildData {
         TreeBuildData {
             stacks: [stack_size, stack_size], 
             ..Default::default()

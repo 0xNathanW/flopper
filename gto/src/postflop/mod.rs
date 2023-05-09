@@ -7,7 +7,7 @@ mod node;
 mod init;
 mod memory;
 mod evaluate;
-mod interpreter;
+mod interface;
 
 #[derive(Debug, Default, Clone, Copy, PartialEq, PartialOrd)]
 pub enum ProcessState {
@@ -99,7 +99,7 @@ pub struct PostFlopGame {
     turn_swapped_suit:      Option<(u8, u8)>,
     turn_swap:              Option<u8>,
     river_swap:             Option<(u8, u8)>,
-    total_bet_amount:       [u32; 2],
+    total_bet_amount:       [i32; 2],
     weights:                [Vec<f32>; 2],
     normalised_weights:     [Vec<f32>; 2],
     cf_values_cache:        [Vec<f32>; 2],
@@ -119,7 +119,7 @@ pub struct PostFlopNode {
 
     locked: bool,
 
-    amount: u32,
+    amount: i32,
 
     children_offset: u32,
 

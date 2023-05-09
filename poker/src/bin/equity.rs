@@ -3,7 +3,6 @@ use anyhow::{Result, Context};
 use prettytable::{Table, Row, Cell};
 use poker::{
     range::Range, 
-    card::Card, 
     equity::{equity_enumerate, EquityResults}, board::Board,
 };
 

@@ -14,10 +14,10 @@ pub enum CardParseError {
 
 #[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
 pub enum Suit { 
+    Clubs,
+    Diamonds,
     Hearts,
     Spades,
-    Diamonds,
-    Clubs,
 }
 
 pub const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
@@ -25,10 +25,10 @@ pub const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
         match value {
-            0 => Suit::Hearts,
-            1 => Suit::Spades,
-            2 => Suit::Diamonds,
-            3 => Suit::Clubs,
+            0 => Suit::Clubs,
+            1 => Suit::Diamonds,
+            2 => Suit::Hearts,
+            3 => Suit::Spades,
             _ => panic!("Invalid suit value: {}", value),
         }
     }

@@ -20,13 +20,13 @@ pub struct BetSizingsStreet {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum BetSize {
     // Bet a fixed amount.
-    Absolute(u32),
+    Absolute(i32),
     // Bet proportional to the pot - Eg. 50%.
     PotScaled(f64),
     // Bet proportional to previous bet (thus only for raises) - Eg. 2x.
     PrevScaled(f64),
     // Geometrically sized bets for .0 streets, max pot scaled size of .1.
-    Geometric(u32, f64),
+    Geometric(i32, f64),
     // Bet whole stack.
     AllIn,
 }
@@ -84,7 +84,7 @@ fn parse_bets(s: &str, raise: bool) -> Result<Vec<BetSize>, BetParseError> {
                 let street = if a.is_empty() {
                     0
                 } else {
-                    let n = a.parse::<u32>()?;
+                    let n = a.parse::<i32>()?;
                     if n == 0 || n > 100 {
                         return Err(BetParseError::Custom(
                             "Invalid geometric bet street number.".to_string()
@@ -109,7 +109,7 @@ fn parse_bets(s: &str, raise: bool) -> Result<Vec<BetSize>, BetParseError> {
                     
                     'c' => {
                         let s = s.trim_end_matches('c');
-                        let i = s.parse::<u32>()?;
+                        let i = s.parse::<i32>()?;
                         Ok(BetSize::Absolute(i))
                     }
 

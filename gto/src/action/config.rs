@@ -7,9 +7,9 @@ pub struct TreeConfig {
 
     pub initial_street: Street,
     
-    pub starting_pot: u32,
+    pub starting_pot: i32,
     
-    pub effective_stack: u32,
+    pub effective_stack: i32,
     
     pub rake: f64,
     
