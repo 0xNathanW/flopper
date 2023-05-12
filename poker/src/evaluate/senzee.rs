@@ -23,9 +23,9 @@ pub fn rank_cards_senzee(hand: &[Card]) -> HandRank {
 pub fn rank_bit_mask_senzee(hand: &[u32]) -> HandRank {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     let rank_num = match hand.len() {
-        5 => eval_5(&hand),
-        6 => eval_6(&hand),
-        7 => eval_7(&hand),
+        5 => eval_5(hand),
+        6 => eval_6(hand),
+        7 => eval_7(hand),
         _ => unreachable!(),
     };
 

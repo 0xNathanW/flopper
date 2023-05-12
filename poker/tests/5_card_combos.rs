@@ -1,11 +1,6 @@
 use std::{collections::HashMap, time};
 use poker::{card::Card, deck::Deck};
-use poker::evaluate::{
-    rank_bit_mask_senzee, 
-    rank_hand_5,
-    HandRank,
-    load_lookup_table, rank_cards_naive, 
-};
+use poker::evaluate::*;
 
 #[test]
 fn test_combo_5_senzee() {

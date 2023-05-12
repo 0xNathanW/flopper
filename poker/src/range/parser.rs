@@ -43,13 +43,12 @@ impl Range {
             return Err(RangeParseError::EmptyRange);
         }
 
+        // Weighted Range
         if input.starts_with("[") {
             let mut chars = input.chars();
-            // Weighted Range
             loop {
-                // Parse Weight
                 if let Some(c) = chars.next() {
-
+                    // Get rid of whitespace.
                     if c == ' ' {
                         continue;
                     } else if c != '[' {
@@ -65,7 +64,6 @@ impl Range {
                         }
                         weight_str_pre.push(c);
                     }
-                    println!("weight_str_pre: {}", weight_str_pre);
 
                     let weight = str::parse::<f32>(&weight_str_pre.as_str())?;
                     if weight < 0.0 || weight > 1.0 {
@@ -76,6 +74,7 @@ impl Range {
                     let mut r = String::new();
                     loop {
                         let c = chars.next().ok_or(RangeParseError::UnexpectedEOF)?;
+                        // Check for weight closer.
                         if c == '[' {
                             break;
                         }
@@ -116,6 +115,7 @@ impl Range {
     }
 }
 
+// Parse all elements for a given weight.
 fn parse_weight(range: &mut Range, input: &str, weight: f32) -> Result<(), RangeParseError> {
 
     for elem in input.split(",").map(|s| s.trim()) {
@@ -158,7 +158,6 @@ fn parse_weight(range: &mut Range, input: &str, weight: f32) -> Result<(), Range
                 // Suited, Offsuit
                 else {
                     let suitedness = chars.next().unwrap();
-
                     match suitedness {
                         's' => {
                             for idx in suited_idxs(rank_1, rank_2) {

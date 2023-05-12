@@ -7,6 +7,7 @@ pub mod evaluate;
 pub mod equity;
 pub mod range;
 
+// Primitives.
 pub use {
     hand::Hand,
     deck::Deck,

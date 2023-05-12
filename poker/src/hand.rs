@@ -61,6 +61,7 @@ impl Hand {
         Hand(Card(card1 as u8), Card(card2 as u8))
     }
 
+    // Returns a bit mask of the two cards.
     pub fn mask(&self) -> u64 {
         (1 << self.0.0) | (1 << self.1.0)
     }

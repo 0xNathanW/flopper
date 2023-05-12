@@ -155,7 +155,7 @@ impl Rank {
             Rank::King => 8.0,
             Rank::Queen => 7.0,
             Rank::Jack => 6.0,
-            _ => (self.clone() as u8 as f32 + 2.0) / 2.0,
+            _ => (*self as u8 as f32 + 2.0) / 2.0,
         }
     }
 }

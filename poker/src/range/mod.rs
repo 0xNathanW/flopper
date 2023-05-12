@@ -1,7 +1,8 @@
 use std::{ops::Deref, fmt::Debug};
-use crate::{hand::Hand, card::{RANKS, Rank, Card, SUITS, Suit}};
+use crate::{hand::Hand, card::*};
 
 mod parser;
+pub use parser::*;
 
 pub struct Range {
     name:   String,
@@ -11,7 +12,7 @@ pub struct Range {
 impl Default for Range {
     fn default() -> Self {
         Range {
-            name:   String::from("default"),
+            name:   String::from(""),
             hands:  [0.0; 1326],
         }
     }
@@ -26,13 +27,6 @@ impl Deref for Range {
 }
 
 impl Range {
-
-    pub fn full_range() -> Range {
-        Range {
-            name:   String::from("full-range"),
-            hands:  [1.0; 1326],
-        }
-    }
 
     pub fn name(&self) -> &str {
         &self.name
@@ -54,6 +48,7 @@ impl Range {
         self.hands[hand.idx()] = weight;
     }
 
+    // Returns all hands in the range with their weights.
     pub fn hand_combos(&self) -> Vec<(Hand, f32)> {
         
         let mut hands = Vec::new();
@@ -68,6 +63,7 @@ impl Range {
         hands
     }
 
+    // Same as hand_combos, but excludes hands with cards in the dead mask.
     pub fn hand_combos_dead(&self, dead: u64) -> Vec<(Hand, f32)> {
 
         let mut hands = Vec::new();
@@ -167,6 +163,7 @@ impl Debug for Range {
     }
 }
 
+// Indexes of paired hands.
 pub fn pair_idxs(rank: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(6);
@@ -184,6 +181,7 @@ pub fn pair_idxs(rank: Rank) -> Vec<usize> {
     idxs
 }
 
+// Indexes of suited hands.
 pub fn suited_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(4);
@@ -199,6 +197,7 @@ pub fn suited_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
     idxs
 }
 
+// Indexes of offsuit hands.
 pub fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(12);

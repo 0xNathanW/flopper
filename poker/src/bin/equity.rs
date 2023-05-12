@@ -24,7 +24,7 @@ fn main() -> Result<()> {
     
     let mut ranges = Vec::new();
     for (i, r) in args.ranges.iter().enumerate() {
-        let range = Range::from_str(&r).with_context(|| format!("Failed to parse range number {}", i))?;
+        let range = Range::from_str(r).with_context(|| format!("Failed to parse range number {}", i))?;
         ranges.push(range);
     }
 

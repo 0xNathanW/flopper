@@ -5,6 +5,12 @@ use crate::card::Card;
 #[derive(Debug, Clone)]
 pub struct Deck(Vec<Card>);
 
+impl Default for Deck {
+    fn default() -> Deck {
+        Deck::new()
+    }
+}
+
 impl Deck {
 
     pub fn new() -> Deck {
@@ -53,7 +59,7 @@ impl<'a> IntoIterator for &'a Deck {
     type IntoIter = std::slice::Iter<'a, Card>;
 
     fn into_iter(self) -> Self::IntoIter {
-        (&self.0).iter()
+        (self.0).iter()
     }
 }
 

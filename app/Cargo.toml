@@ -1,0 +1,10 @@
+[package]
+name = "app"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+egui = "0.21"
+eframe = "0.21"
+gto = { path = "../gto" }
+poker = { path = "../poker" }

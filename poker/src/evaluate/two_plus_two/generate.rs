@@ -90,10 +90,8 @@ fn get_id(id_in: i64, card: i32) -> (i32, Option<i64>) {
         suit_count[(work_cards[num_cards] as usize) & 0xF] += 1;
         rank_count[(work_cards[num_cards] as usize) >> 4] += 1;
 
-        if num_cards != 0 {
-            if work_cards[0] == work_cards[num_cards] {
-                get_out = 1;
-            }
+        if num_cards != 0 && work_cards[0] == work_cards[num_cards] {
+            get_out = 1;
         }
 
         num_cards += 1;
@@ -182,7 +180,7 @@ pub fn load_lookup_table() -> Result<Vec<i32>> {
                 std::io::ErrorKind::NotFound => {
                     File::open("poker/lookup_table.bin")?
                 },
-                _ => return Err(e.into()),
+                _ => return Err(e),
             }
         }
     };

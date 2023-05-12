@@ -6,8 +6,8 @@ pub fn rank_cards_naive(hand: &[Card]) -> HandRank {
     assert!(hand.len() >= 5 && hand.len() <= 7);
 
     match hand.len() {
-        5 => rank_hand_5(&hand),
-        6..=7 => rank_hand_not_5(&hand),
+        5 => rank_hand_5(hand),
+        6..=7 => rank_hand_not_5(hand),
         _ => unreachable!(),
     }
 }

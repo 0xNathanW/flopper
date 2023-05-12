@@ -1,5 +1,4 @@
 use std::collections::HashSet;
-
 use thiserror::Error;
 use crate::card::{Card, CardParseError};
 
@@ -44,6 +43,7 @@ impl Board {
             },
             _ => return Err(BoardError::InvalidBoardSize(cards.len())),
         };
+
         b.check_duplicates()?;
         Ok(b)
     }
@@ -69,11 +69,9 @@ impl Board {
         if self.is_flop_dealt() {
             cards.extend_from_slice(&self.flop);
         } 
-
         if self.is_turn_dealt() {
             cards.push(self.turn);
         }
-
         if self.is_river_dealt() {
             cards.push(self.river);
         }

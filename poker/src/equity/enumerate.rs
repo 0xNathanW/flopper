@@ -148,7 +148,7 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> 
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
         let mut cards = [Card::default(); 7];
-        cards[2..5].copy_from_slice(&board);
+        cards[2..5].copy_from_slice(board);
         let mut results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
@@ -180,7 +180,7 @@ fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> 
         let mut cards = [Card::default(); 7];
         let mut results = EquityResults::new(ranges.len());
         
-        cards[2..6].copy_from_slice(&board);
+        cards[2..6].copy_from_slice(board);
         cards[6] = deck[a];
         
         enumerate_board(&ranges, &mut results, &mut cards, &lookup);
