@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 // Bet sizing of the two players.
@@ -9,7 +11,7 @@ pub struct BetSizings {
 }
 
 // Contains available bet sizings for a specific street.
-#[derive(Debug, Default, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BetSizingsStreet {
     // Bet sizings.
     pub bet: Vec<BetSize>,
@@ -17,7 +19,7 @@ pub struct BetSizingsStreet {
     pub raise: Vec<BetSize>,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Default, Clone, Copy, PartialEq)]
 pub enum BetSize {
     // Bet a fixed amount.
     Absolute(i32),
@@ -28,6 +30,7 @@ pub enum BetSize {
     // Geometrically sized bets for .0 streets, max pot scaled size of .1.
     Geometric(i32, f64),
     // Bet whole stack.
+    #[default]
     AllIn,
 }
 
@@ -150,6 +153,40 @@ fn parse_bets(s: &str, raise: bool) -> Result<Vec<BetSize>, BetParseError> {
         } else {
             Ok(bets)
         }
+}
+
+impl Display for BetSize {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BetSize::Absolute(n) => write!(f, "Absolute: {}", n),
+            BetSize::PotScaled(p) => write!(f, "Pot Scaled: {:.2}%", p * 100.0),
+            BetSize::PrevScaled(p) => write!(f, "Prev Scaled: {:.2}x", p),
+            BetSize::Geometric(s, p) => write!(f, "Geometric: {}e{:.2}%", s, p * 100.0),
+            BetSize::AllIn => write!(f, "All In"),
+        }
+    }
+}
+
+impl BetSize {
+    pub fn variant_str(&self) -> &str {
+        match self {
+            BetSize::Absolute(_) => "Absolute",
+            BetSize::PotScaled(_) => "PotScaled",
+            BetSize::PrevScaled(_) => "PrevScaled",
+            BetSize::Geometric(_, _) => "Geometric",
+            BetSize::AllIn => "AllIn",
+        }
+    }
+}
+
+impl Default for BetSizingsStreet {
+    fn default() -> Self {
+        let d = vec![BetSize::AllIn, BetSize::PotScaled(0.33), BetSize::PotScaled(0.5), BetSize::PotScaled(0.75), BetSize::PotScaled(1.0)];
+        BetSizingsStreet {
+            bet:   d.clone(),
+            raise: d.clone(),
+        }
+    }
 }
 
 #[cfg(test)]

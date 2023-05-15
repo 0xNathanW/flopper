@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use thiserror::Error;
 
 pub mod player {
@@ -16,6 +18,27 @@ pub enum Street {
     Flop,
     Turn,
     River,
+}
+
+impl From<usize> for Street {
+    fn from(street: usize) -> Self {
+        match street {
+            0 => Street::Flop,
+            1 => Street::Turn,
+            2 => Street::River,
+            _ => panic!("Invalid street."),
+        }
+    }
+}
+
+impl Display for Street {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Street::Flop  => write!(f, "Flop"),
+            Street::Turn  => write!(f, "Turn"),
+            Street::River => write!(f, "River"),
+        }
+    }
 }
 
 #[derive(Debug, Error)]
