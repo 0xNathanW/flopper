@@ -1,0 +1,26 @@
+
+#weight-input-div {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 0.5em;
+}
+
+#weight-slider {
+    width: 50%;    
+    background: #BAD7E9;
+}
+
+#weight-input {
+    height: 50%;
+    border-radius: 5px;
+    border-color: #2B3467;
+    background-color: #BAD7E9;
+}
+
+#clear {
+    background-color: #EB455F;
+    color: #FCFFE7;
+    border-radius: 5px;
+    border-color: #2B3467;
+}
