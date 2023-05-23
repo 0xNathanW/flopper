@@ -1,3 +1,4 @@
+import { RANKS } from "../../common";
 import "./LoadRange.css";
 
 export default function LoadRange({setWeights}: {setWeights: (weights: number[]) => void}) {
@@ -59,8 +60,6 @@ export default function LoadRange({setWeights}: {setWeights: (weights: number[])
         </div>
     )
 }
-
-const RANKS: string[] = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
 
 function textToRange(text: string): number[] {
 

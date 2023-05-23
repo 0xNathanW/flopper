@@ -1,0 +1,30 @@
+
+.card {
+    width: 40px;
+    height: 40px;;
+
+    outline: none;
+    border: 2px solid black;
+    border-radius: 5px;
+
+    font-weight: bolder;
+
+    margin-left: 5px;
+    margin-top: 5px
+}
+
+.♦ {
+    background-color: lightskyblue;
+}
+
+.♣ {
+    background-color: lightgreen;
+}
+
+.♥ {
+    background-color: lightcoral;
+}
+
+.♠ {
+    background-color: lightgray;
+}

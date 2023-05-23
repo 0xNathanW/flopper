@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
+import { RANKS } from "../../common";
 import "./RangeGrid.css";
 
-const RANKS: string[] = ["A", "K", "Q", "J", "T", "9", "8", "7", "6", "5", "4", "3", "2"];
-const yellow500 = "#EB455F";
+const yellow500 = "#d14334";
 
 type RangeGridProps = {
     weight: number,

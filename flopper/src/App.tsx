@@ -1,11 +1,11 @@
-import RangeSelector from "./range/RangeSelector";
 import "./App.css";
+import Config from "./config/Config";
 
 function App() {
 
   return (
     <>
-        <RangeSelector />
+        <Config />
     </>
   );
 }

@@ -8,19 +8,21 @@
 
 #weight-slider {
     width: 50%;    
-    background: #BAD7E9;
 }
 
 #weight-input {
-    height: 50%;
     border-radius: 5px;
-    border-color: #2B3467;
-    background-color: #BAD7E9;
+    border: 4px solid #d14334;
+    font-weight: 1000;
+    text-align: center;
+    background-color: #b3e099;
 }
 
 #clear {
-    background-color: #EB455F;
-    color: #FCFFE7;
+    background-color: #b3e099;
     border-radius: 5px;
-    border-color: #2B3467;
+    border: 4px solid #d14334;
+
+    font-size: 17px;
+    font-weight: bolder;
 }
