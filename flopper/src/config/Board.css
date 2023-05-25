@@ -1,12 +1,18 @@
 
+#board-h1 {
+    margin-bottom: 0.5rem;
+    margin-top: 0;
+}
+
 .card {
-    width: 40px;
-    height: 40px;;
+    width: 50px;
+    height: 50px;;
 
     outline: none;
     border: 2px solid black;
     border-radius: 5px;
 
+    font-size: 20px;
     font-weight: bolder;
 
     margin-left: 5px;

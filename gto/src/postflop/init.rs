@@ -550,6 +550,7 @@ impl PostFlopGame {
         self.bunching_coeff_turn = Default::default();
         self.to_root();
     }
+
 }
 
 // Move to action module

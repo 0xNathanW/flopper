@@ -2,8 +2,11 @@
 #weight-input-div {
     display: flex;
     flex-direction: row;
+    width: 704px;
     align-items: center;
     gap: 0.5em;
+
+    font-size: 20px;
 }
 
 #weight-slider {
@@ -12,17 +15,27 @@
 
 #weight-input {
     border-radius: 5px;
-    border: 4px solid #d14334;
-    font-weight: 1000;
+    border: 3px solid #3F6C51;
+    
+    font-size: 16px;
+    font-weight: bolder;
     text-align: center;
-    background-color: #b3e099;
+
+    width: 3remx;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
+    background-color: #FFD166;
 }
 
 #clear {
-    background-color: #b3e099;
+    background-color: #FFD166;
     border-radius: 5px;
-    border: 4px solid #d14334;
+    border: 3px solid #3F6C51;
 
-    font-size: 17px;
+    font-size: 16px;
     font-weight: bolder;
+
+    width: 100px;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
 }

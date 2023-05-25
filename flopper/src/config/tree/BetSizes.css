@@ -1,35 +1,43 @@
 
-h3 {
-    text-decoration: underline;
-}
-
 .bet-sizes-player {
     display: flex;
     flex-direction: row;
     justify-content: space-evenly;
-    /* border: 4px solid #d14334; */
+
+    font-size: 1rem;
 }
 
 .bet-sizes-street {
     display: flex;
     flex-direction: column;
-    /* border: 2px solid #d14334; */
-    padding-bottom: 15px;
+    border: 2px solid #3F6C51;
+    border-radius: 7px;
+    padding: 1rem 1rem 1rem 1rem;
 }
 
-.bet-grid {
+.bet-sizes-street legend {
+    border : 2px solid #3F6C51;
+    border-radius: 7px;
+    padding: 0.2rem 0.5rem;
+}
+
+#bet-sizes-grid {
     display: grid;
-    grid-template-columns: [label] 60px [input] 70px;
-    align-items: center;
-    justify-items: start;
-    row-gap: 0;
+    grid-template-columns: 3.5rem 10rem;
+    grid-template-rows: auto;
+    row-gap: 1.5rem;
+    column-gap: 10px;
 }
 
 .bet-input {
-    width: 150px;
-    height: 1.5em;
-    font-weight: 1000;
+    background-color: #FFD166;
     border-radius: 5px;
-    border: 4px solid #d14334;
-    background-color: #b3e099;
+    border: 3px solid #3F6C51;
+
+    font-size: 16px;
+    font-weight: bolder;
+}
+
+.all-in {
+    
 }

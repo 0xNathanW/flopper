@@ -1,4 +1,3 @@
-import { P } from "@tauri-apps/api/event-30ea0228";
 import { RANKS  } from "../common";
 import "./Board.css";
 
@@ -20,17 +19,14 @@ export default function Board({board, setBoard}: {board: number[], setBoard: (bo
     const boardText = board.map(idx => idxToCard(idx).join("")).join(" ");
 
     return (
-        <>
-            <h1>Board: {boardText} </h1>
-            <div id="board">
-                <SuitCards suit={"♦"} onClick={onClick} />
-                <SuitCards suit={"♥"} onClick={onClick} />
-                <SuitCards suit={"♣"} onClick={onClick} />
-                <SuitCards suit={"♠"} onClick={onClick} />
-            </div>
-        </>
+        <div id="board">
+            <h1 id="board-h1">Board: {boardText} </h1>
+            <SuitCards suit={"♦"} onClick={onClick} />
+            <SuitCards suit={"♥"} onClick={onClick} />
+            <SuitCards suit={"♣"} onClick={onClick} />
+            <SuitCards suit={"♠"} onClick={onClick} />
+        </div>
     )
-
 }
 
 function SuitCards({suit, onClick}: {suit: string, onClick: (e: React.MouseEvent<HTMLButtonElement>, rank: string, suit: string) => void}) {

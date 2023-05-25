@@ -1,6 +1,5 @@
 import "./TreeConfig.css"
 import { TreeConfigValues } from "../Config"
-import BetSizes from "./BetSizes"
 
 export default function TreeConfig(
     { treeConfig, setTreeConfig }: 
@@ -10,9 +9,9 @@ export default function TreeConfig(
     return (
         <div id="tree-config">
             <h1>Tree Config</h1>
-            <BaseConfig treeConfig={treeConfig} setTreeConfig={setTreeConfig}/>
-            <h1>Bet Sizes</h1>
-            <BetSizes />
+            <div id="tree-config-row">
+                <BaseConfig treeConfig={treeConfig} setTreeConfig={setTreeConfig}/>
+            </div>
         </div>
     )
 }
@@ -50,6 +49,20 @@ function BaseConfig(
         })
     }
 
+    const handleChangeAddAllIn = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTreeConfig({
+            ...treeConfig,
+            addAllIn: parseInt(e.target.value)
+        })
+    }
+
+    const handleChangeForceAllIn = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setTreeConfig({
+            ...treeConfig,
+            forceAllIn: parseInt(e.target.value)
+        })
+    }
+
     return (
         <div id="base-config">
             <p className="config-label">Starting Pot Size:</p>
@@ -72,6 +85,16 @@ function BaseConfig(
                 onChange={handleChangeRake}
             />
 
+            <p className="config-label">Add All-In Threshold %:</p>
+            <input
+                className="config-input"
+                type="number"
+                min="0"
+                value={treeConfig.addAllIn}
+                onChange={handleChangeAddAllIn}
+            />
+
+
             <p className="config-label">Effective Stack:</p>
             <input
                 className="config-input"
@@ -89,6 +112,16 @@ function BaseConfig(
                 value={treeConfig.rakeCap}
                 onChange={handleChangeRakeCap}
             />
+
+            <p className="config-label">Force All-In Threshold %:</p>
+            <input
+                className="config-input"
+                type="number"
+                min="0"
+                value={treeConfig.forceAllIn}
+                onChange={handleChangeForceAllIn}
+            />
+            
         </div>
     )
 }

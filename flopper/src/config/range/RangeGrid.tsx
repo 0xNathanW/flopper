@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { RANKS } from "../../common";
 import "./RangeGrid.css";
 
-const yellow500 = "#d14334";
+const yellow500 = "#C14B1F";
 
 type RangeGridProps = {
     weight: number,

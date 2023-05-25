@@ -933,6 +933,8 @@ dependencies = [
 name = "flopper"
 version = "0.0.0"
 dependencies = [
+ "gto",
+ "poker",
  "serde",
  "serde_json",
  "tauri",
@@ -1348,6 +1350,7 @@ version = "0.1.0"
 dependencies = [
  "poker",
  "rayon",
+ "serde",
  "thiserror",
 ]
 

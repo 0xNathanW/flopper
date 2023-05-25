@@ -12,25 +12,23 @@ export default function RangeSelector(props: WeightsProps) {
     const [oop, setOOP] = useState(false);
     
     return (
-        <>
-            <div id="range-selector">
-                <div id="range-header">
-                    <PlayerToggle setOOP={setOOP} oop={oop}/>
-                    <h1>Range</h1>
-                </div>
-                    <RangeGrid
-                        weight={weight} 
-                        weights={ oop ? props.weightsOOP : props.weightsIP } 
-                        setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } 
-                    />
-                    <WeightInput 
-                        setWeight={setWeight} 
-                        weight={weight} 
-                        setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } 
-                    />
-            <LoadRange setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } />
+        <div id="range-selector">
+            <div id="range-header">
+                <PlayerToggle setOOP={setOOP} oop={oop}/>
+                <h1>Range</h1>
             </div>
-        </>
+                <RangeGrid
+                    weight={weight} 
+                    weights={ oop ? props.weightsOOP : props.weightsIP } 
+                    setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } 
+                />
+                <WeightInput 
+                    setWeight={setWeight} 
+                    weight={weight} 
+                    setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } 
+                />
+        <LoadRange setWeights={ oop ? props.setWeightsOOP : props.setWeightsIP } />
+        </div>
     )
 }
 

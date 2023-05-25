@@ -1,16 +1,19 @@
 import { RANKS } from "../../common";
 import "./LoadRange.css";
 
-export default function LoadRange({setWeights}: {setWeights: (weights: number[]) => void}) {
+export default function LoadRange(
+    {setWeights}: {setWeights: (weights: number[]) => void}
+    ) {
 
     const handleClick = (s: string) => {
         setWeights(textToRange(s));
     }
 
     return (
-        <div id="load-range">
+        <>
+            <h2 style={{alignSelf: "flex-start"}}>Load Range</h2>
+            {/* <hr className="rounded" /> */}
             <div id="tree-div">
-                <h1>Load Range</h1>
                 <ul className="tree">
                     <li>6-Max PokerStrategy.com
                         <summary>
@@ -57,7 +60,7 @@ export default function LoadRange({setWeights}: {setWeights: (weights: number[])
                     </li>
                 </ul>
             </div>
-        </div>
+        </>
     )
 }
 

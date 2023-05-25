@@ -13,25 +13,33 @@ export default function BetSizes() {
 function BetSizesStreetPlayer({oop}: {oop: boolean}) {
 
     return (
-        <div className="bet-sizes-player">
-            <BetSizesStreet street={0} />
-            <BetSizesStreet street={1} />
-            <BetSizesStreet street={2} />
-        </div>
+        <>
+            <h2>Bet Sizes: {oop ? "OOP" : "IP"}</h2>
+            <div className="bet-sizes-player">
+                <BetSizesStreet street={0} oop={oop} />
+                <BetSizesStreet street={1} oop={oop} />
+                <BetSizesStreet street={2} oop={oop} />
+            </div>
+        </>
     )
 }
 
-function BetSizesStreet({ street }: { street: number }) {
+function BetSizesStreet({ street, oop }: { street: number, oop: boolean }) {
+    
     return (
-        <div className="bet-sizes-street">
-            <h3>{streetText(street)}</h3>       
-            <div className="bet-grid">
-                <p>Bet:</p> 
+        <fieldset className="bet-sizes-street">
+            <legend>{streetText(street)}</legend>   
+            <div id="bet-sizes-grid">
+                <label>Bet:</label> 
                 <input type="text" className="bet-input"></input>
-                <p>Raise:</p>
+            
+                <label>Raise:</label>
                 <input type="text" className="bet-input"></input>
+            
+                <label>All-in</label>
+                <input type="checkbox" className="all-in"></input>
             </div>
-        </div>
+        </fieldset>
     )
 }
 

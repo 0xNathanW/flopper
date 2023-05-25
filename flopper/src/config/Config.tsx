@@ -1,14 +1,17 @@
 import { useState } from "react";
 import Board from "./Board";
 import RangeSelector from "./range/RangeSelector";
-import "./Config.css";
 import TreeConfig from "./tree/TreeConfig";
+import "./Config.css";
+import BetSizes from "./tree/BetSizes";
 
 export type TreeConfigValues = {
     startingPot:    number,
     effectiveStack: number,
     rake:           number,
     rakeCap:        number,
+    addAllIn:       number,
+    forceAllIn:     number,
 }
 
 export type WeightsProps = {
@@ -27,11 +30,14 @@ export default function Config() {
     // Idxs of the board cards.
     const [board, setBoard] = useState<number[]>([]);
 
+    // Tree config.
     const [treeConfig, setTreeConfig] = useState<TreeConfigValues>({
         startingPot:    40,
         effectiveStack: 100,
         rake:           0,
         rakeCap:        3,
+        addAllIn:       0,
+        forceAllIn:     0,
     });
 
     return (
@@ -43,10 +49,11 @@ export default function Config() {
                     setWeightsIP={setWeightsIP}
                     setWeightsOOP={setWeightsOOP}
                 />
-                <Board board={board} setBoard={setBoard}/> 
             </div>
         
             <div id="config-right">
+                <Board board={board} setBoard={setBoard}/> 
+                <BetSizes />
                 <TreeConfig treeConfig={treeConfig} setTreeConfig={setTreeConfig} />
             </div>
         </div>
