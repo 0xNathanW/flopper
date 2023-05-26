@@ -1,18 +1,23 @@
 import { RANKS  } from "../common";
+import { useAppDispatch, useAppSelector } from "../store/store";
 import "./Board.css";
+import { addToBoard, removeFromBoard } from "../store/features/configSlice";
 
-export default function Board({board, setBoard}: {board: number[], setBoard: (board: number[]) => void}) {
+export default function Board() {
+
+    const board = useAppSelector(state => state.config.board);
+    const dispatch = useAppDispatch();
 
     const onClick = (e: React.MouseEvent<HTMLButtonElement>, rank: string, suit: string) => {
         let button = e.target as HTMLButtonElement;
         const idx = cardToIdx(rank, suit);
         if (board.includes(idx)) {
             button.style.backgroundColor = suitColour(suit);
-            setBoard(board.filter(i => i !== idx));
+            dispatch(removeFromBoard(idx));
         }
         else if (board.length < 5) {
             button.style.backgroundColor = "yellow";
-            setBoard([...board, idx]);
+            dispatch(addToBoard(idx));
         }
     }
 
@@ -46,7 +51,7 @@ function BoardCard(rank: string, suit: string, onClick: (e: React.MouseEvent<HTM
         <button 
             className={`card ${suit}`}
             key={rank + suit}
-            onClick={(e) => onClick(e,rank, suit)}
+            onClick={(e) => onClick(e, rank, suit)}
         >{rank}{suit[0]}</button>
     )
 }

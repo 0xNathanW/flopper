@@ -1,12 +1,19 @@
 import { RANKS } from "../../common";
+import { useAppDispatch } from "../../store/store";
 import "./LoadRange.css";
+import { setRangeOOP, setRangeIP } from "../../store/features/configSlice";
 
-export default function LoadRange(
-    {setWeights}: {setWeights: (weights: number[]) => void}
-    ) {
+export default function LoadRange({oop}: {oop: boolean}) {
+
+    const dispatch = useAppDispatch();
 
     const handleClick = (s: string) => {
-        setWeights(textToRange(s));
+        if (oop) {
+            dispatch(setRangeOOP(textToRange(s)));
+        }
+        else {
+            dispatch(setRangeIP(textToRange(s)));
+        }        
     }
 
     return (

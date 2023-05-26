@@ -1,5 +1,4 @@
 use std::fmt::Display;
-
 use thiserror::Error;
 
 // Bet sizing of the two players.
@@ -148,11 +147,11 @@ fn parse_bets(s: &str, raise: bool) -> Result<Vec<BetSize>, BetParseError> {
 
         }).collect::<Result<Vec<BetSize>, BetParseError>>()?;
 
-        if bets.len() == 0 {
-            return Err(BetParseError::EmptyBetString);
-        } else {
+        // if bets.len() == 0 {
+            // return Err(BetParseError::EmptyBetString);
+        // } else {
             Ok(bets)
-        }
+        // }
 }
 
 impl Display for BetSize {
@@ -163,18 +162,6 @@ impl Display for BetSize {
             BetSize::PrevScaled(p) => write!(f, "Prev Scaled: {:.2}x", p),
             BetSize::Geometric(s, p) => write!(f, "Geometric: {}e{:.2}%", s, p * 100.0),
             BetSize::AllIn => write!(f, "All In"),
-        }
-    }
-}
-
-impl BetSize {
-    pub fn variant_str(&self) -> &str {
-        match self {
-            BetSize::Absolute(_) => "Absolute",
-            BetSize::PotScaled(_) => "PotScaled",
-            BetSize::PrevScaled(_) => "PrevScaled",
-            BetSize::Geometric(_, _) => "Geometric",
-            BetSize::AllIn => "AllIn",
         }
     }
 }

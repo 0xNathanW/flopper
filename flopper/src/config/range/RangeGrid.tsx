@@ -1,21 +1,21 @@
 import { useEffect, useState } from "react";
 import { RANKS } from "../../common";
 import "./RangeGrid.css";
+import { useAppDispatch, useAppSelector } from "../../store/store";
+import { setWeightOOP, setWeightIP } from "../../store/features/configSlice";
 
 const yellow500 = "#C14B1F";
 
-type RangeGridProps = {
-    weight: number,
-    weights: number[],
-    setWeights: (weights: number[]) => void,
-}
+export default function RangeGrid({oop, weight}: {oop: boolean, weight: number}) {
 
-export default function RangeGrid(props: RangeGridProps) {
+    const config = useAppSelector(state => state.config);
+    const dispatch = useAppDispatch();
+
     // True if the mouse is down, false otherwise.
     const [mouseDown, setMouseDown] = useState<boolean>(false);
 
     const get_weight = (i: number, j: number) => {
-        return props.weights[i * 13 + j];
+        return oop ? config.rangeOOP[i * 13 + j] : config.rangeIP[i * 13 + j];
     }
 
     // Add event listeners for mouseup and mousedown.
@@ -29,8 +29,11 @@ export default function RangeGrid(props: RangeGridProps) {
     // If mouse is down and the mouse is over a cell, update cell weight.
     const handleMouseDown = (i: number, j: number) => {
         const idx = i * 13 + j;
-        const newWeights = props.weights.map((prevWeight, i) => i === idx ? props.weight : prevWeight);
-        props.setWeights(newWeights);
+        if (oop) {
+            dispatch(setWeightOOP([idx, weight]));
+        } else {
+            dispatch(setWeightIP([idx, weight]));
+        }
         setMouseDown(true);
     }
     
@@ -38,8 +41,11 @@ export default function RangeGrid(props: RangeGridProps) {
     const handleMouseOver = (i: number, j: number) => {
         if (mouseDown) {
             const idx = i * 13 + j;
-            const newWeights = props.weights.map((prevWeight, i) => i === idx ? props.weight : prevWeight);
-            props.setWeights(newWeights);
+            if (oop) {
+                dispatch(setWeightOOP([idx, weight]));
+            } else {
+                dispatch(setWeightIP([idx, weight]));
+            }
         }
     }
 

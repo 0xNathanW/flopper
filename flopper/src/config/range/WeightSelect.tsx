@@ -1,13 +1,17 @@
+import { useAppDispatch } from "../../store/store";
 import "./WeightSelect.css";
+import { clearRangeIP, clearRangeOOP } from "../../store/features/configSlice";
 
 type WeightSelectProps = {
+    oop: boolean,
     weight: number,
     setWeight: (weight: number) => void,
-    setWeights: (weights: number[]) => void,
 }
 
 export default function WeightSelect(props: WeightSelectProps) {
-    
+
+    const dispatch = useAppDispatch();
+
     const handleWeightChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         props.setWeight(Number(e.target.value));
     }
@@ -34,7 +38,13 @@ export default function WeightSelect(props: WeightSelectProps) {
             />
             <p> %</p>
 
-            <button id="clear" onClick={() => props.setWeights(Array(169).fill(0))}>Clear</button>
+            <button id="clear" onClick={() => {
+                if (props.oop) {
+                    dispatch(clearRangeOOP());
+                } else {
+                    dispatch(clearRangeIP());
+                }
+            }}>Clear</button>
         </div>
     )
 }

@@ -1,67 +1,30 @@
 import "./TreeConfig.css"
-import { TreeConfigValues } from "../Config"
+import { useAppDispatch, useAppSelector } from "../../store/store";
+import {
+    setStartingPot,
+    setEffectiveStack,
+    setRake,
+    setRakeCap,
+    setAddAllIn,
+    setForceAllIn
+} from "../../store/features/configSlice";
 
-export default function TreeConfig(
-    { treeConfig, setTreeConfig }: 
-    { treeConfig: TreeConfigValues, setTreeConfig: (treeConfig: TreeConfigValues) => void }
-) {
+export default function TreeConfig() {
 
     return (
         <div id="tree-config">
             <h1>Tree Config</h1>
             <div id="tree-config-row">
-                <BaseConfig treeConfig={treeConfig} setTreeConfig={setTreeConfig}/>
+                <BaseConfig />
             </div>
         </div>
     )
 }
 
-function BaseConfig(
-    { treeConfig, setTreeConfig }:
-    { treeConfig: TreeConfigValues, setTreeConfig: (treeConfig: TreeConfigValues) => void }
-) {
+function BaseConfig() {
 
-    const handleChangeStartingPot = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            startingPot: parseInt(e.target.value)
-        })
-    }
-    
-    const handleChangeEffectiveStack = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            effectiveStack: parseInt(e.target.value)
-        })
-    }
-
-    const handleChangeRake = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            rake: Number(e.target.value)
-        })
-    }
-
-    const handleChangeRakeCap = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            rakeCap: parseInt(e.target.value)
-        })
-    }
-
-    const handleChangeAddAllIn = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            addAllIn: parseInt(e.target.value)
-        })
-    }
-
-    const handleChangeForceAllIn = (e: React.ChangeEvent<HTMLInputElement>) => {
-        setTreeConfig({
-            ...treeConfig,
-            forceAllIn: parseInt(e.target.value)
-        })
-    }
+    const dispatch = useAppDispatch();
+    const treeConfig = useAppSelector(state => state.config);
 
     return (
         <div id="base-config">
@@ -71,7 +34,7 @@ function BaseConfig(
                 type="number"
                 min="0"
                 value={treeConfig.startingPot}
-                onChange={handleChangeStartingPot}
+                onChange={(e) => dispatch(setStartingPot(Number(e.target.value)))}
             />
 
             <p className="config-label">Rake %:</p>
@@ -82,7 +45,7 @@ function BaseConfig(
                 max="100"
                 step="1"
                 value={treeConfig.rake}
-                onChange={handleChangeRake}
+                onChange={(e) => dispatch(setRake(Number(e.target.value)))}
             />
 
             <p className="config-label">Add All-In Threshold %:</p>
@@ -91,7 +54,7 @@ function BaseConfig(
                 type="number"
                 min="0"
                 value={treeConfig.addAllIn}
-                onChange={handleChangeAddAllIn}
+                onChange={(e) => dispatch(setAddAllIn(Number(e.target.value)))}
             />
 
 
@@ -101,7 +64,7 @@ function BaseConfig(
                 type="number"
                 min="0"
                 value={treeConfig.effectiveStack}
-                onChange={handleChangeEffectiveStack}
+                onChange={(e) => dispatch(setEffectiveStack(Number(e.target.value)))}
             />
 
             <p className="config-label">Rake Cap:</p>
@@ -110,7 +73,7 @@ function BaseConfig(
                 type="number"
                 min="0"
                 value={treeConfig.rakeCap}
-                onChange={handleChangeRakeCap}
+                onChange={(e) => dispatch(setRakeCap(Number(e.target.value)))}
             />
 
             <p className="config-label">Force All-In Threshold %:</p>
@@ -119,7 +82,7 @@ function BaseConfig(
                 type="number"
                 min="0"
                 value={treeConfig.forceAllIn}
-                onChange={handleChangeForceAllIn}
+                onChange={(e) => dispatch(setForceAllIn(Number(e.target.value)))}
             />
             
         </div>
