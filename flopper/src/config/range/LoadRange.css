@@ -1,9 +1,17 @@
 
-hr.rounded{
-    border-top: 3px solid #C14B1F;
-    border-radius: 5px;
+#tree-border {
     width: 100%;
-    margin-bottom: 1rem;
+    height: 360px;
+    border: 4px solid #3F6C51;
+    border-radius: 7px;
+    margin-top: 0.5rem;
+}
+
+#tree-border legend {
+    border : 4px solid #3F6C51;
+    border-radius: 7px;
+    padding: 0.2rem 0.5rem;
+    font-size: 30px;
 }
 
 #tree-div {
@@ -11,10 +19,6 @@ hr.rounded{
     width: 100%;
     height: 300px;
     overflow-y: scroll;
-}
-
-#tree-div::-webkit-scrollbar-track {
-    background-color: #C14B1F;
 }
 
 .tree{

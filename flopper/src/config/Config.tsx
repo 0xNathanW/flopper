@@ -1,33 +1,27 @@
 import Board from "./Board";
 import RangeSelector from "./range/RangeSelector";
 import TreeConfig from "./tree/TreeConfig";
-import "./Config.css";
 import BetSizes from "./tree/BetSizes";
+import { useState } from "react";
+import "./Config.css";
+import BuildTree from "./BuildTree";
 
 export default function Config() {
     return (
         <div id="config">
-            <div id="config-left"> 
+
+            <div id="config-left">
                 <RangeSelector />
             </div>
         
             <div id="config-right">
+                <div id="config-right-upper">
                     <Board /> 
+                    <TreeConfig />
+                </div>
                 <BetSizes />
-                <TreeConfig />
-                <Build />
+                <BuildTree />
             </div>
-        </div>
-    )
-}
-
-function Build() {
-
-    return (
-        <div id="build">
-            <button className="build-button">Build Tree</button>
-            <button className="build-button">Preview Tree</button>
-            <button className="build-button">Run Solver</button>
         </div>
     )
 }

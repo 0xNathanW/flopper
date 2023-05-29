@@ -1,7 +1,7 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 
 export interface AppState {
-    panel: string,
+    panel:     string,
     treeBuilt: boolean,
     solverRun: boolean,
 }

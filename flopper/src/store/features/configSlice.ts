@@ -9,6 +9,21 @@ export interface Config {
     addAllIn:       number,
     forceAllIn:     number,
 
+    betSizes:       [
+    // IP
+        [
+            [string, string], // flop [bet, raise]
+            [string, string], // turn
+            [string, string], // river
+        ],
+    // OOP
+        [
+            [string, string],
+            [string, string],
+            [string, string],
+        ],
+    ]
+
     board:          number[],
     rangeIP:        Array<number>,
     rangeOOP:       Array<number>,
@@ -21,6 +36,11 @@ const initialState: Config = {
     rakeCap:        3,
     addAllIn:       0,
     forceAllIn:     0,
+
+    betSizes:       [
+        [["", ""], ["", ""], ["", ""]],
+        [["", ""], ["", ""], ["", ""]],
+    ],
 
     board:          [],
     rangeIP:        Array(169).fill(0),
@@ -51,6 +71,16 @@ export const configSlice = createSlice({
             state.forceAllIn = action.payload;
         },
 
+        // params: oop: bool, street: number, raise: boolean, betSize: string
+        setBetSize(state, action: PayloadAction<[boolean, number, boolean, string]>) {
+            const [oop, street, raise, betSize] = action.payload;
+            state.betSizes[+oop][street][+raise] = betSize;
+        },
+
+        copyOOP(state) {
+            state.betSizes[0] = state.betSizes[1];
+        },
+
         // params: [idx, weight]
         setWeightOOP: (state, action: PayloadAction<[number, number]>) => {
             state.rangeOOP = state.rangeOOP.map((weight, idx) => idx === action.payload[0] ? action.payload[1] : weight)
@@ -76,7 +106,7 @@ export const configSlice = createSlice({
         },
         removeFromBoard: (state, action: PayloadAction<number>) => {
             state.board = state.board.filter((card) => card !== action.payload);
-        }
+        },
     }
 })
 
@@ -89,6 +119,8 @@ export const {
     setForceAllIn,
     setWeightOOP,
     setWeightIP,
+    setBetSize,
+    copyOOP,
     setRangeOOP,
     setRangeIP,
     clearRangeIP,

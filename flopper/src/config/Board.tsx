@@ -26,23 +26,25 @@ export default function Board() {
     return (
         <div id="board">
             <h1 id="board-h1">Board: {boardText} </h1>
-            <SuitCards suit={"♦"} onClick={onClick} />
-            <SuitCards suit={"♥"} onClick={onClick} />
-            <SuitCards suit={"♣"} onClick={onClick} />
-            <SuitCards suit={"♠"} onClick={onClick} />
+            <div id="board-cards">
+                <SuitCards suit={"♦"} onClick={onClick} />
+                <SuitCards suit={"♥"} onClick={onClick} />
+                <SuitCards suit={"♣"} onClick={onClick} />
+                <SuitCards suit={"♠"} onClick={onClick} />
+            </div>
         </div>
     )
 }
 
 function SuitCards({suit, onClick}: {suit: string, onClick: (e: React.MouseEvent<HTMLButtonElement>, rank: string, suit: string) => void}) {
     return (
-        <div className="suit-row">
+        <>
             {
                 RANKS.map((rank, i) => {
                     return BoardCard(rank, suit, onClick);
                 })
             }
-        </div>
+        </>
     )
 }
 

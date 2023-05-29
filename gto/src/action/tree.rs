@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{fmt::Debug, ops::DerefMut};
 use crate::{Street, player::*, ConfigError, latch::Latch};
 use super::{*, build_data::TreeBuildData, bets::BetSize};
 

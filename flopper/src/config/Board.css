@@ -1,7 +1,8 @@
 
-#board-h1 {
-    margin-bottom: 0.5rem;
-    margin-top: 0;
+#board-cards {
+    display: grid;
+    grid-template-columns: repeat(13, 50px);
+    gap: 5px;
 }
 
 .card {
@@ -14,9 +15,6 @@
 
     font-size: 20px;
     font-weight: bolder;
-
-    margin-left: 5px;
-    margin-top: 5px
 }
 
 .♦ {

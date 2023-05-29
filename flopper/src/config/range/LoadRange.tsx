@@ -17,9 +17,8 @@ export default function LoadRange({oop}: {oop: boolean}) {
     }
 
     return (
-        <>
-            <h2 style={{alignSelf: "flex-start"}}>Load Range</h2>
-            {/* <hr className="rounded" /> */}
+        <fieldset id="tree-border">
+            <legend>Load Range</legend>
             <div id="tree-div">
                 <ul className="tree">
                     <li>6-Max PokerStrategy.com
@@ -67,7 +66,7 @@ export default function LoadRange({oop}: {oop: boolean}) {
                     </li>
                 </ul>
             </div>
-        </>
+        </fieldset>
     )
 }
 

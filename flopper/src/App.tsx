@@ -8,6 +8,7 @@ function App() {
 
     const appState = useAppSelector(state => state.appState);
 
+    // What should be rendered in the main panel.
     const panel = () => {
         if (appState.panel === "build") {
             return <Config />;

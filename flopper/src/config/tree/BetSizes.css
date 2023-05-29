@@ -1,18 +1,31 @@
 
-.bet-sizes-player {
+#bet-sizes {
+    width: 100%;
+}
+
+.bet-sizes-header {
     display: flex;
     flex-direction: row;
-    justify-content: space-evenly;
+    justify-content: flex-start;
+    column-gap: 2rem;
+    align-items: center;
+}
 
+.bet-sizes-player {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    column-gap: 3rem;
     font-size: 1rem;
 }
 
 .bet-sizes-street {
     display: flex;
     flex-direction: column;
+    align-items: center;
     border: 2px solid #3F6C51;
     border-radius: 7px;
     padding: 1rem 1rem 1rem 1rem;
+    height: fit-content;
 }
 
 .bet-sizes-street legend {
@@ -23,8 +36,10 @@
 
 #bet-sizes-grid {
     display: grid;
-    grid-template-columns: 3.5rem 10rem;
+    grid-template-columns: 3.5rem 12.5rem;
     grid-template-rows: auto;
+    align-items: center;
+    justify-items: start;
     row-gap: 1.5rem;
     column-gap: 10px;
 }
@@ -38,6 +53,50 @@
     font-weight: bolder;
 }
 
-.all-in {
-    
+.bet-error {
+    border: 2px solid darkred;
+    border-radius: 5px;
+    background-color: lightcoral;
+    color: black;
+    font-weight: bolder;
+    margin-bottom: 0.25rem;
 }
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 500px;
+    background-color: #132A3E;
+    border: 3px solid #3F6C51;
+    border-radius: 7px;
+    text-align: justify;
+    border-radius: 6px;
+    padding: 0.5rem 1rem; 
+    /* Position the tooltip */
+    position: absolute;
+    z-index: 1;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+}
+
+.copy-btn {
+    background-color: #FFD166;
+    border-radius: 5px;
+    border: 3px solid #3F6C51;
+
+    font-size: 16px;
+    font-weight: bolder;
+
+    width: 100px;
+    padding-top: 0.3rem;
+    padding-bottom: 0.3rem;
+}
+
+  
