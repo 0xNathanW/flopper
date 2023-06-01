@@ -48,7 +48,7 @@ export default function BuildTree() {
 
     const showError = () => {
         if (error !== "") {
-            return <p className="build-tree-error">{error}</p>
+            return <p className="error-msg">{error}</p>
         }
     }
 

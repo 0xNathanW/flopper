@@ -107,13 +107,13 @@ function BetSizesStreet({ street, oop, trigger }: { street: number, oop: boolean
 
     const showBetError = () => {
         if (betError !== "") {
-            return <p className="bet-error">{betError}</p>
+            return <p className="error-msg">{betError}</p>
         }
     }
 
     const showRaiseError = () => {
         if (raiseError !== "") {
-            return <p className="bet-error">{raiseError}</p>
+            return <p className="error-msg">{raiseError}</p>
         }
     }
 

@@ -8,13 +8,6 @@
 }
 
 .config-input {
-    border-radius: 5px;
-    border: 2px solid #3F6C51;
     width: 3.5rem;
     height: 1.5em;
-
-    font-size: 16px;
-    font-weight: bolder;
-    
-    background-color: #FFD166;
 }

@@ -5,7 +5,6 @@
     width: 704px;
     align-items: center;
     gap: 0.5em;
-
     font-size: 20px;
 }
 
@@ -14,28 +13,10 @@
 }
 
 #weight-input {
-    border-radius: 5px;
-    border: 3px solid #3F6C51;
-    
-    font-size: 16px;
-    font-weight: bolder;
     text-align: center;
-
-    width: 3remx;
-    padding-top: 0.25rem;
-    padding-bottom: 0.25rem;
-    background-color: #FFD166;
+    width: 3rem;
 }
 
 #clear {
-    background-color: #FFD166;
-    border-radius: 5px;
-    border: 3px solid #3F6C51;
-
-    font-size: 16px;
-    font-weight: bolder;
-
     width: 100px;
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
 }

@@ -44,24 +44,6 @@
     column-gap: 10px;
 }
 
-.bet-input {
-    background-color: #FFD166;
-    border-radius: 5px;
-    border: 3px solid #3F6C51;
-
-    font-size: 16px;
-    font-weight: bolder;
-}
-
-.bet-error {
-    border: 2px solid darkred;
-    border-radius: 5px;
-    background-color: lightcoral;
-    color: black;
-    font-weight: bolder;
-    margin-bottom: 0.25rem;
-}
-
 .tooltip {
     position: relative;
     display: inline-block;
@@ -87,16 +69,8 @@
 }
 
 .copy-btn {
-    background-color: #FFD166;
-    border-radius: 5px;
-    border: 3px solid #3F6C51;
-
-    font-size: 16px;
-    font-weight: bolder;
-
+    font-size: 0.75rem;
     width: 100px;
-    padding-top: 0.3rem;
-    padding-bottom: 0.3rem;
 }
 
   
