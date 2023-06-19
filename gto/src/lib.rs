@@ -43,7 +43,7 @@ impl Display for Street {
 
 #[derive(Debug, Error)]
 pub enum ConfigError {
-    #[error("Input for {0} is invalid.  {1}")]
+    #[error("Input for {0} is invalid. {1}")]
     InvalidInput(String, String),
 
     #[error("Invalid terminal node found in action tree.")]

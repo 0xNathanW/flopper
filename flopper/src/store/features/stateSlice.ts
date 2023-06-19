@@ -1,13 +1,13 @@
 import { PayloadAction, createSlice } from "@reduxjs/toolkit";
 
 export interface AppState {
-    panel:     string,
+    // Whether action tree has been built.
     treeBuilt: boolean,
+    // Whether the solver has been run.
     solverRun: boolean,
 }
 
 const initialState: AppState = {
-    panel: "build",
     treeBuilt: false,
     solverRun: false,
 }
@@ -22,12 +22,8 @@ export const appSlice = createSlice({
         setSolverRun: (state, action: PayloadAction<boolean>) => {
             state.solverRun = action.payload;
         },
-        setPanel: (state, action: PayloadAction<string>) => {
-            state.panel = action.payload;
-        }
     }
 })
 
-export const { setTreeBuilt, setSolverRun, setPanel } = appSlice.actions;
-
+export const { setTreeBuilt, setSolverRun } = appSlice.actions;
 export default appSlice.reducer;

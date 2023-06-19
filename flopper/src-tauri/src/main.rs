@@ -8,6 +8,19 @@ fn main() {
         .manage(ActionTree::default())
         .invoke_handler(tauri::generate_handler![
             build_action_tree,
+            num_nodes,
+            to_root,
+            get_actions,
+            get_added_lines,
+            get_removed_lines,
+            get_invalid_terminals,
+            play,
+            remove_current_node,
+            apply_history,
+            add_bet_action,
+            total_bet_amount,
+            is_terminal_node,
+            is_chance_node,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

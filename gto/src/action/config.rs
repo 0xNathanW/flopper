@@ -25,7 +25,16 @@ pub struct TreeConfig {
 impl TreeConfig {
     // Verifies config parameters.
     pub fn verify(&self) -> Result<(), ConfigError> {
-
+        if self.starting_pot <= 0 {
+            return Err(ConfigError::InvalidInput(
+                "Starting pot".to_string(), "Must be greater than 0.".to_string()
+            ));
+        }
+        if self.effective_stack <= 0 {
+            return Err(ConfigError::InvalidInput(
+                "Effective stack".to_string(), "Must be greater than 0.".to_string()
+            ));
+        }
         if self.rake < 0.0 || self.rake > 1.0 {
             return Err(ConfigError::InvalidInput(
                 "Rake".to_string(), "Must be between 0 and 1.".to_string()

@@ -1,30 +1,21 @@
-import "./App.css";
-import NavBar from "./Navbar";
-import Config from "./config/Config";
-import Preview from "./preview/Preview";
-import { useAppSelector } from "./store/store";
+import "./index.css";
+import { useState } from "react";
+import Navbar from "./components/Navbar";
+import Config from "./components/Config";
 
 function App() {
 
-    const appState = useAppSelector(state => state.appState);
-
-    // What should be rendered in the main panel.
-    const panel = () => {
-        if (appState.panel === "build") {
-            return <Config />;
-        } else if (appState.panel === "preview") {
-            return <Preview />;
-        } else {
-            return <Config />;
-        }
-    }
+    const [panel, setPanel] = useState("config");
 
     return (
         <>
-            <NavBar />
-            {panel()}
+            <Navbar setPanel={setPanel} />
+            <div>
+                { panel === "config" ? <Config /> : <Config /> }
+            </div>
         </>
-  );
+    )
 }
 
 export default App;
+

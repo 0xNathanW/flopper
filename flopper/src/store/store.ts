@@ -5,7 +5,9 @@ import { appSlice } from "./features/stateSlice";
 
 export const store = configureStore({
     reducer: {
-        config: configSlice.reducer,
+        // Config for the solver.
+        config:   configSlice.reducer,
+        // Tracks the state of the app.
         appState: appSlice.reducer,
     },
 });

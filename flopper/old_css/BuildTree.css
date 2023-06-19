@@ -1,0 +1,27 @@
+
+#build-tree {
+    display: flex;
+    flex-direction: column;
+    align-items: start;
+    gap: 1rem;
+    padding: 1rem;
+    width: 100%;
+}
+
+#build-tree-row {
+    display: flex;
+    width: 100%;
+    flex-direction: row;
+    align-items: center;
+    gap: 2rem;
+    margin: 1rem 0;
+}
+
+.build-tree-btn {
+    font-size: 1.5rem;
+    font-weight: bolder;
+    background-color: #FFD166;
+    border-radius: 7px;
+    border: 5px solid #3F6C51;
+    padding: 0.25rem;
+}

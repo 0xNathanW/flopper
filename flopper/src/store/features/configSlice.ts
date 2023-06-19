@@ -1,6 +1,6 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit"
+import { createSlice, PayloadAction } from "@reduxjs/toolkit";
 
-export interface Config {
+export interface ConfigTree {
 
     startingPot:    number,
     effectiveStack: number,
@@ -25,11 +25,16 @@ export interface Config {
     ]
 
     board:          number[],
-    rangeIP:        Array<number>,
+    // 169 long array of weights to be coverted in rust backend.
+    rangeIP:        Array<number>, 
     rangeOOP:       Array<number>,
+
+    // TODO
+    addedLines:     string,
+    removedLines:   string,
 }
 
-const initialState: Config = {
+const initialState: ConfigTree = {
     startingPot:    40,
     effectiveStack: 100,
     rake:           0,
@@ -38,13 +43,18 @@ const initialState: Config = {
     forceAllIn:     0,
 
     betSizes:       [
+        // OOP
         [["", ""], ["", ""], ["", ""]],
+        // IP
         [["", ""], ["", ""], ["", ""]],
     ],
 
     board:          [],
     rangeIP:        Array(169).fill(0),
     rangeOOP:       Array(169).fill(0),
+    
+    addedLines:     "",
+    removedLines:   "",
 }
 
 export const configSlice = createSlice({
@@ -101,11 +111,32 @@ export const configSlice = createSlice({
             state.rangeOOP = Array(169).fill(0);
         },
 
+        randomiseBoard(state, action: PayloadAction<number>) {
+            let newBoard: number[] = [];
+            for (let i = 0; i < action.payload; i++) {
+                let card = Math.floor(Math.random() * 52);
+                while (newBoard.includes(card)) {
+                    card = Math.floor(Math.random() * 52);
+                }
+                newBoard.push(card);
+            }
+            state.board = newBoard;
+        },
         addToBoard: (state, action: PayloadAction<number>) => {
             state.board.push(action.payload);
         },
         removeFromBoard: (state, action: PayloadAction<number>) => {
             state.board = state.board.filter((card) => card !== action.payload);
+        },
+        clearBoard: (state) => {
+            state.board = [];
+        },
+
+        setAddedLines: (state, action: PayloadAction<string>) => {
+            state.addedLines = action.payload;
+        },
+        setRemovedLines: (state, action: PayloadAction<string>) => {
+            state.removedLines = action.payload;
         },
     }
 })
@@ -125,8 +156,12 @@ export const {
     setRangeIP,
     clearRangeIP,
     clearRangeOOP,
+    randomiseBoard,
     addToBoard,
     removeFromBoard,
+    clearBoard,
+    setAddedLines,
+    setRemovedLines,
 } = configSlice.actions;
 
 export default configSlice.reducer;

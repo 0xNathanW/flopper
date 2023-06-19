@@ -1,5 +1,5 @@
 use gto::{Street, solve::solve};
-use gto::action::{BetSizingsStreet, ActionTree, TreeConfig, BetSizings};
+use gto::action::{BetSizingsStreet, ActionTree, TreeConfig, BetSizings, Action};
 use gto::postflop::PostFlopGame;
 use gto::slice_ops::average;
 use poker::{Board, Card};
@@ -7,12 +7,12 @@ use poker::range::Range;
 
 fn main() {
 
-    let oop_range = Range::from_str("66+,A8s+,A4s-A5s,AJo+,K9s+,KQo,QTs+,JTs,96s+,85s+,75s+,65s,54s").unwrap();
-    let ip_range = Range::from_str("22-QQ,A2s-AQs,ATo+,K5s+,KJo+,Q8s+,J8s+,T7s+,96s+,86s+,75s+,64s+,53s+").unwrap();
-    let board = Board::from_str("Td 9d 6h Qc").unwrap();
+    // let oop_range = Range::from_str("KK+,AKs,AKo").unwrap();
+    // let ip_range = Range::from_str("QQ+,AQs+,AQo+,KQs,KQo").unwrap();
+    // let board = Board::from_str("Td 9d 6h").unwrap();
     
     // let sizings = BetSizingsStreet::from_str("60%, e, a", "2.5x").unwrap(); 
-    let sizings = BetSizingsStreet::from_str("", "").unwrap();
+    let sizings = BetSizingsStreet::from_str("50%", "50%").unwrap();
 
     let bets = BetSizings {
         flop: [sizings.clone(), sizings.clone()],
@@ -22,17 +22,21 @@ fn main() {
 
     let tree_config = TreeConfig {
         initial_street:         Street::Flop,
-        starting_pot:           20,
+        starting_pot:           40,
         effective_stack:        100,
         rake:                   0.0,
-        rake_cap:               0.0,
+        rake_cap:               3.0,
         bet_sizings:            bets,
-        add_all_in_threshold:   1.50,
-        force_all_in_threshold: 0.20,
+        add_all_in_threshold:   0.0,
+        force_all_in_threshold: 0.0,
     };
 
-    let tree = ActionTree::new(tree_config).unwrap();
-    println!("{:?}", tree.print_nodes());
+    let mut tree = ActionTree::new(tree_config).unwrap();
+
+    tree.apply_history(&[Action::Check, Action::Check, Action::Check]).unwrap();
+    let n = tree.current_node();
+    println!("{:#?}", n);
+    println!("{}", n.is_chance());
     // let mut game = PostFlopGame::new([oop_range, ip_range], board,tree).unwrap();
 
     // let (uncompressed, compressed) = game.memory_usage();
