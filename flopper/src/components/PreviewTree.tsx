@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ActionNode, ChanceNode, PlayerNode, RootNode, TerminalNode } from "../node_types"
 import { useAppSelector } from "../store/store";
 import * as rust from "../rust_funcs";
+import { ConfigTree } from "../store/features/configSlice";
 
 type SelectData = {
     nodes: ActionNode[];
@@ -97,119 +98,6 @@ export default function PreviewTree() {
         return Math.min(Math.max(2 * max - min, 1), maxAmountMut8(inputs));
     };
 
-    const encodeLine = (nodeIdx: number, inputs: SelectData) => {
-        const out = [];
-        for (let i = 1; i < nodeIdx; ++i) {
-            const node = inputs.nodes[i];
-            if (node.type === "player") {
-                const action = node.actions[node.selectedIdx];
-                if (action.name === "Fold") {
-                    out.push("F");
-                } else if (action.name === "Call") {
-                    out.push("C");
-                } else if (action.name === "Check") {
-                    out.push("X");
-                } else if (action.name === "Bet") {
-                    out.push("B" + action.amount);
-                } else if (action.name === "Raise") {
-                    out.push("R" + action.amount);
-                } else if (action.name === "Allin") {
-                    out.push("A" + action.amount);
-                }
-            }
-        }
-        return out;
-    };
-
-    const pushResultsPlayer = async (inputs: SelectData) => {
-        
-        const prevNode = inputs.nodes[inputs.selectedIdx - 1];
-        const player = prevNode.player === "oop" ? "ip" : "oop";
-        const actions = await rust.getActions();
-        inputs.nodes.push(
-            {
-                type: "player",
-                idx: inputs.selectedIdx,
-                player: player,
-                selectedIdx: -1,
-                actions: actions.map((action, i) => {
-                    const [name, amount] = action.split(":");
-                    return {
-                        idx: i,
-                        name,
-                        amount,
-                        selected: false,
-                        colour: "#000"
-                    }
-                }),
-            }
-        );
-    };
-
-    const pushResultsTerminal = (inputs: SelectData) => {
-        const prevNode = inputs.nodes[inputs.selectedIdx - 1] as PlayerNode;
-        const prevAction = prevNode.actions[prevNode.selectedIdx];
-
-        let equityOOP = -1;
-        if (prevAction.name === "Fold") equityOOP = prevNode.player === "oop" ? 0 : 1;
-
-        inputs.nodes.push(
-            {
-                type: "terminal",
-                idx: inputs.selectedIdx,
-                player: "end",
-                selectedIdx: -1,
-                prevPlayer: prevNode.player,
-                equityOOP,
-                pot: config.startingPot + inputs.totalBet[0] + inputs.totalBet[1],
-            },
-        );
-    };
-
-    const pushResultsChance = async (inputs: SelectData) => {
-        
-        type TurnNode = RootNode | ChanceNode;
-        const prevNode = inputs.nodes[inputs.selectedIdx - 1] as PlayerNode;
-        const turnNode = inputs.nodes.find(node => node.player === "turn") as TurnNode | undefined;
-        const nxtActions = await rust.getActions();
-
-        inputs.nodes.push(
-            {
-                type: "chance",
-                idx: inputs.selectedIdx,
-                player: turnNode ? "river" : "turn",
-                selectedIdx: -1,
-                prevPlayer: prevNode.player,
-                cards: Array.from({ length: 52}, (_, i) => ({
-                    card: i,
-                    selected: false,
-                    dead: true,
-                })),
-                pot: config.startingPot + 2 * inputs.totalBet[0],
-                stack: config.effectiveStack - inputs.totalBet[0],
-            },
-        );
-        inputs.nodes.push(
-            {
-                type: "player",
-                idx: inputs.selectedIdx + 1,
-                player: "oop",
-                selectedIdx: -1,
-                actions: nxtActions.map((action, i) => {
-                    const [name, amount] = action.split(":");
-                    return {
-                        idx: i,
-                        name,
-                        amount,
-                        rate: -1,
-                        selected: false,
-                        colour: "#000"
-                    };
-                }),
-            },
-        );
-    };
-
     const play = async (nodeIdx: number, actionIdx: number) => {
         const nodesCopy = [...nodes];
         const node = nodesCopy[nodeIdx] as PlayerNode;
@@ -228,14 +116,6 @@ export default function PreviewTree() {
             prevBet: prevBetAmount,
             locked: locked,
         };
-        selectNodeInternal(nodeIdx + 1, true, false, true, inputs).then(() => {
-            setNodes(inputs.nodes);
-            setSelectedNodeIdx(inputs.selectedIdx);
-            setBetAmount(inputs.bet);
-            setTotalBetAmount(inputs.totalBet);
-            setPrevBetAmount(inputs.prevBet);
-            setLocked(inputs.locked);
-        });
     };
 
     
@@ -255,7 +135,6 @@ export default function PreviewTree() {
             prevBet: prevBetAmount,
             locked: locked,
         };
-        await selectNodeInternal(nodeIdx, splice, rebuild, updateAmount, inputs);
         
         setNodes(inputs.nodes);
         setSelectedNodeIdx(inputs.selectedIdx);
@@ -359,3 +238,116 @@ export default function PreviewTree() {
         </>
     )
 }
+
+function pushResultsTerminal(inputs: SelectData, config: ConfigTree): void {
+    const prevNode = inputs.nodes[inputs.selectedIdx - 1] as PlayerNode;
+    const prevAction = prevNode.actions[prevNode.selectedIdx];
+
+    let equityOOP = -1;
+    if (prevAction.name === "Fold") equityOOP = prevNode.player === "oop" ? 0 : 1;
+
+    inputs.nodes.push(
+        {
+            type: "terminal",
+            idx: inputs.selectedIdx,
+            player: "end",
+            selectedIdx: -1,
+            prevPlayer: prevNode.player,
+            equityOOP,
+            pot: config.startingPot + inputs.totalBet[0] + inputs.totalBet[1],
+        },
+    );
+};
+
+async function pushResultsChance(inputs: SelectData, config: ConfigTree): Promise<void> {
+    
+    type TurnNode = RootNode | ChanceNode;
+    const prevNode = inputs.nodes[inputs.selectedIdx - 1] as PlayerNode;
+    const turnNode = inputs.nodes.find(node => node.player === "turn") as TurnNode | undefined;
+    const nxtActions = await rust.getActions();
+
+    inputs.nodes.push(
+        {
+            type: "chance",
+            idx: inputs.selectedIdx,
+            player: turnNode ? "river" : "turn",
+            selectedIdx: -1,
+            prevPlayer: prevNode.player,
+            cards: Array.from({ length: 52}, (_, i) => ({
+                card: i,
+                selected: false,
+                dead: true,
+            })),
+            pot: config.startingPot + 2 * inputs.totalBet[0],
+            stack: config.effectiveStack - inputs.totalBet[0],
+        },
+    );
+    inputs.nodes.push(
+        {
+            type: "player",
+            idx: inputs.selectedIdx + 1,
+            player: "oop",
+            selectedIdx: -1,
+            actions: nxtActions.map((action, i) => {
+                const [name, amount] = action.split(":");
+                return {
+                    idx: i,
+                    name,
+                    amount,
+                    rate: -1,
+                    selected: false,
+                    colour: "#000"
+                };
+            }),
+        },
+    );
+};
+
+async function pushResultsPlayer(inputs: SelectData): Promise<void> {
+        
+    const prevNode = inputs.nodes[inputs.selectedIdx - 1];
+    const player = prevNode.player === "oop" ? "ip" : "oop";
+    const actions = await rust.getActions();
+    inputs.nodes.push(
+        {
+            type: "player",
+            idx: inputs.selectedIdx,
+            player: player,
+            selectedIdx: -1,
+            actions: actions.map((action, i) => {
+                const [name, amount] = action.split(":");
+                return {
+                    idx: i,
+                    name,
+                    amount,
+                    selected: false,
+                    colour: "#000"
+                }
+            }),
+        }
+    );
+};
+
+function encodeLine(nodeIdx: number, inputs: SelectData): string[] {
+    const out = [];
+    for (let i = 1; i < nodeIdx; ++i) {
+        const node = inputs.nodes[i];
+        if (node.type === "player") {
+            const action = node.actions[node.selectedIdx];
+            if (action.name === "Fold") {
+                out.push("F");
+            } else if (action.name === "Call") {
+                out.push("C");
+            } else if (action.name === "Check") {
+                out.push("X");
+            } else if (action.name === "Bet") {
+                out.push("B" + action.amount);
+            } else if (action.name === "Raise") {
+                out.push("R" + action.amount);
+            } else if (action.name === "Allin") {
+                out.push("A" + action.amount);
+            }
+        }
+    }
+    return out;
+};

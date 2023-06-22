@@ -3518,6 +3518,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "vue-flopper"
+version = "0.0.0"
+dependencies = [
+ "gto",
+ "poker",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+]
+
+[[package]]
 name = "walkdir"
 version = "2.3.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { invoke } from "@tauri-apps/api";
 import * as rust from "../rust_funcs";
 import { useAppDispatch, useAppSelector } from "../store/store";
 import MiniRange from "./MiniRange";
