@@ -41,8 +41,10 @@
         "fullscreen": false,
         "resizable": true,
         "title": "vue-flopper",
-        "width": 800,
-        "height": 600
+        "width": 1080,
+        "height": 720,
+        "minWidth": 1080,
+        "minHeight": 720
       }
     ]
   }

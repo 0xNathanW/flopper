@@ -14,7 +14,7 @@
             
             <div v-for="player in 2">
 
-                <div class="flex flex-row items-center gap-3 self-start mb-10 items-center">
+                <div class="flex flex-row items-center gap-3 self-start mb-10">
                     <h1 class="text-2xl self-start font-bold">OOP Bet Sizes:</h1>
                     <!-- oop has tooltip -->
                     <div v-if="player === 1" class="tooltip tooltip-right tooltip-info" data-tip={syntaxTip}>

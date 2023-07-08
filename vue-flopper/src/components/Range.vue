@@ -7,11 +7,28 @@
     const config = useConfigStore();
     const props = defineProps<{oop: boolean}>();
     
+    // Is the mouse down.
     type DragStatus = "none" | "enabled" | "disabled";
-
-    let weight = ref(100);
     let dragStatus: DragStatus = "none";
 
+    const handleMouseDown = (i: number, j: number) => {
+        config.setWeight(cellIdx(i, j), weight.value, props.oop);
+        dragStatus = "enabled";
+    };
+
+    const handleMouseOver = (i: number, j: number) => {
+        if (dragStatus == "enabled") {
+            config.setWeight(cellIdx(i, j), weight.value, props.oop);
+        }
+    };
+
+    window.addEventListener("mouseup", () => {
+        dragStatus = "none";
+    });
+
+    let weight = ref(100);
+
+    // eg. AA, AKo, AKs etc.
     const cellText = (i: number, j: number): string => {
         const rank1 = RANKS[i - 1];
         const rank2 = RANKS[j - 1];
@@ -22,27 +39,19 @@
         } else {
             return rank2 + rank1 + "o";
         }
-    }
+    };
 
+    // Index of cell in range array.
     const cellIdx = (i: number, j: number): number => {
         return (i - 1) * 13 + (j - 1);
-    }
+    };
 
+    // Get corresponding weight from range array.
     const getWeight = (i: number, j: number): number => {
         return props.oop ? config.oopRange[cellIdx(i, j)] : config.ipRange[cellIdx(i, j)];
-    }
+    };
 
-    const handleMouseDown = (i: number, j: number) => {
-        config.setWeight(cellIdx(i, j), weight.value, props.oop);
-        dragStatus = "enabled";
-    }
-
-    const handleMouseOver = (i: number, j: number) => {
-        if (dragStatus == "enabled") {
-            config.setWeight(cellIdx(i, j), weight.value, props.oop);
-        }
-    }
-
+    // String of weight to display in bottom right of cell if not 0 or 100.
     const weightText = (i: number, j: number): (string | null) =>  {
         const weight = getWeight(i, j).toString();
         if (weight === "0" || weight === "100") {
@@ -50,8 +59,9 @@
         } else {
             return weight.toString() + "%";
         }
-    }
+    };
 
+    // Load a range from a string change in future to load from a json file with all saved ranges.
     const loadRange = (s: string) => {
         const range = textToRange(s);
         if (props.oop) {
@@ -59,7 +69,7 @@
         } else {
             config.ipRange = range;
         }
-    }
+    };
 
     // Temp values, eventually moved into json file.
     const positions = ["MP2", "MP3", "CO", "BTN", "SB"];
@@ -87,10 +97,6 @@
         "22+,A2s+,K2s+,Q2s+,J5s+,T8s+,97s+,87s,76s,65s,54s,A2o+,K2o+,Q8o+,J8o+,T8o+,97o+,87o,76o,65o,54o",
         "22+,A2s+,K7s+,Q7s+,J7s+,T8s+,97s+,87s,76s,65s,54s,A2o+,K8o+,Q8o+,J8o+,T8o+,97o+,87o,76o,65o,54o",
     ];
-
-    window.addEventListener("mouseup", () => {
-        dragStatus = "none";
-    });
 </script>
 
 <template>
@@ -131,7 +137,7 @@
                         </div>
 
                         <div class="absolute top-0 left-0.5">{{ cellText(row, col) }}</div>
-                        <div 
+                        <div
                             class="absolute bottom-0 right-0.5"
                         >
                             {{ weightText(row, col)  }}
@@ -143,7 +149,7 @@
             <div class="flex flex-row mt-4 w-full items-center gap-5">
                 <p>Weight: </p>
                 <input
-                    v-model="weight"
+                    v-model.number="weight"
                     class="range range-primary"
                     type="range"
                     min="0"
@@ -151,7 +157,7 @@
                     step="5"
                 />
                 <input
-                    v-model="weight"
+                    v-model.number="weight"
                     class="input input-primary input-bordered input-sm"
                     type="number"
                     min="0"

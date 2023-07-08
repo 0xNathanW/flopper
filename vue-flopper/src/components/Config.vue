@@ -1,3 +1,4 @@
+
 <script setup lang="ts">
     import { useStore, useConfigStore } from '../store';
     import { suitColour, idxToCard } from '../util';
@@ -5,8 +6,10 @@
     import Range from './Range.vue';
     import Board from './Board.vue';
     import TreeConfig from './TreeConfig.vue';
+    import PreviewTree from './PreviewTree.vue';
     import RunSolver from './RunSolver.vue';
-    const store = useStore();
+
+    const app = useStore();
     const config = useConfigStore();
 </script>
 
@@ -17,24 +20,29 @@
         <!-- config panel content -->
         <div class="drawer-content mt-7 px-5 justify-center">
             
-            <Range v-show="store.configPanel === 'rangeOOP'" :oop="true" />
+            <Range v-show="app.configPanel === 'rangeOOP'" :oop="true" />
 
-            <Range v-show="store.configPanel === 'rangeIP'" :oop="false" />
+            <Range v-show="app.configPanel === 'rangeIP'" :oop="false" />
 
-            <Board v-show="store.configPanel === 'board'" />
+            <Board v-show="app.configPanel === 'board'" />
 
-            <TreeConfig v-show="store.configPanel === 'treeConfig'" />
+            <TreeConfig v-show="app.configPanel === 'treeConfig'" />
 
-            <div v-if="store.configPanel === 'run'">
+            <div v-if="app.configPanel === 'preview'">
+                <h1 class="text-2xl font-bold">Preview Tree:</h1>
+                <div class="divider my-0"></div>
                 <Suspense>
                     <template #default>
-                        <RunSolver />
+                        <PreviewTree />
                     </template>
                     <template #fallback>
                         <div>Loading...</div>
                     </template>
                 </Suspense>
+                <div class="divider my-0"></div>                
             </div>
+
+            <RunSolver v-show="app.configPanel === 'run'" />
 
             <label htmlFor="my-drawer-2" class="btn btn-base-200 drawer-button lg:hidden self-start ml-3 fixed top-16 left-2">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" class="w-6 h-6">
@@ -48,11 +56,11 @@
             <label htmlFor="my-drawer-2" className="drawer-overlay"></label>
             <ul className="menu p-4 w-75 h-full bg-base-200 text-base-content text-xl">
                 <!-- side panel contents -->
-                <li @click="store.configPanel = 'rangeOOP'"><MiniRange :oop="true" /></li>
+                <li @click="app.configPanel = 'rangeOOP'"><MiniRange :oop="true" /></li>
 
-                <li @click="store.configPanel = 'rangeIP'"><MiniRange :oop="false" /></li>
+                <li @click="app.configPanel = 'rangeIP'"><MiniRange :oop="false" /></li>
 
-                <li @click="store.configPanel = 'board'">
+                <li @click="app.configPanel = 'board'">
                     <a>
                         <div class="flex flex-col gap-1">
                             Board
@@ -74,14 +82,20 @@
                     </a>
                 </li>
 
-                <li @click="store.configPanel = 'treeConfig'"><a>Tree Config</a></li>
+                <li @click="app.configPanel = 'treeConfig'"><a>Tree Config</a></li>
 
                 <div class="divider"></div>
 
+                <button
+                    class="btn btn-outline mb-4"
+                    :disabled="config.configInvalid"
+                    @click="app.configPanel = 'preview'"
+                >Preview Tree</button>
+
                 <button 
                     class="btn btn-outline"
-                    :disabled="config.configInValid"
-                    @click="store.configPanel = 'run'"
+                    :disabled="config.configInvalid"
+                    @click="app.configPanel = 'run'"
                 >Build & Run</button>
             </ul>
         </div>

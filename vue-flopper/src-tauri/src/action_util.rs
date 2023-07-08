@@ -1,6 +1,5 @@
 use gto::action::Action;
 
-
 pub fn action_to_str(action: Action) -> String {
     match action {
         Action::Fold => "Fold:0".to_string(),

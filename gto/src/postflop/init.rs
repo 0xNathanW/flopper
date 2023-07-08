@@ -141,7 +141,7 @@ impl PostFlopGame {
     
         let mut river_idxs = vec![[Vec::new(), Vec::new()]; 1326];
         for t in 0..52 {
-            for r in 0..52 {
+            for r in (t + 1)..52 {
                 let t = Card(t);
                 let r = Card(r);
     
@@ -257,7 +257,7 @@ impl PostFlopGame {
         
         let mut isomorphic_suit = [None; 4];
         // Maps hand range index to index in hands array.
-        let mut reverse_table = vec![usize::MAX, 1326];
+        let mut reverse_table = vec![usize::MAX; 1326];
 
         let mut iso_ref_turn = Vec::new();
         let mut iso_card_turn = Vec::new();

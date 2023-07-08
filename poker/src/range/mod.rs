@@ -28,6 +28,44 @@ impl Deref for Range {
 
 impl Range {
 
+    pub fn new_from_grid(elems: Vec<f32>) -> Self {
+
+        assert!(elems.len() == 169);
+        let mut hands = [0.0; 1326];
+
+        for i in 0..13 {
+            for j in 0..13 {
+                
+
+                if i == j {
+                    let rank = Rank::from(i as u8);
+                    for idx in pair_idxs(rank) {
+                        hands[idx] = elems[(12 - i) * 13 + (12 - j)];
+                    }
+                
+                } else if i < j {
+                    let rank_1 = Rank::from(i as u8);
+                    let rank_2 = Rank::from(j as u8);
+                    for idx in suited_idxs(rank_1, rank_2) {
+                        hands[idx] = elems[(12 - i) * 13 + (12 - j)];
+                    }
+                
+                } else {
+                    let rank_1 = Rank::from(i as u8);
+                    let rank_2 = Rank::from(j as u8);
+                    for idx in offsuit_idxs(rank_1, rank_2) {
+                        hands[idx] = elems[(12 - i) * 13 + (12 - j)];
+                    }
+                }
+            }
+        }
+
+        Range {
+            name:   String::from(""),
+            hands,
+        }
+    }
+
     pub fn name(&self) -> &str {
         &self.name
     }
@@ -215,4 +253,34 @@ pub fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
         }
     }
     idxs
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn test() {
+
+        let a = [
+            1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
+            0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+        ];
+        let range = super::Range::new_from_grid(a.to_vec());
+
+        let b = "QQ+, AQs+, KQs, AQo+, KQo";
+        let range_2 = super::Range::from_str(b).unwrap();
+
+        assert_eq!(range.hands, range_2.hands);
+    }
 }

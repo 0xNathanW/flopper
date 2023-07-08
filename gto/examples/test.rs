@@ -1,17 +1,15 @@
 use gto::{Street, solve::solve};
 use gto::action::{BetSizingsStreet, ActionTree, TreeConfig, BetSizings, Action};
 use gto::postflop::PostFlopGame;
-use gto::slice_ops::average;
 use poker::{Board, Card};
 use poker::range::Range;
 
 fn main() {
 
-    // let oop_range = Range::from_str("KK+,AKs,AKo").unwrap();
-    // let ip_range = Range::from_str("QQ+,AQs+,AQo+,KQs,KQo").unwrap();
-    // let board = Board::from_str("Td 9d 6h").unwrap();
+    let oop_range = Range::from_str("KK+").unwrap();
+    let ip_range = Range::from_str("22+").unwrap();
+    let board = Board::from_str("Td 9d 6h").unwrap();
     
-    // let sizings = BetSizingsStreet::from_str("60%, e, a", "2.5x").unwrap(); 
     let sizings = BetSizingsStreet::from_str("50%", "50%").unwrap();
 
     let bets = BetSizings {
@@ -33,15 +31,14 @@ fn main() {
 
     let mut tree = ActionTree::new(tree_config).unwrap();
 
-    tree.apply_history(&[Action::Check, Action::Check, Action::Check]).unwrap();
-    let n = tree.current_node();
-    println!("{:#?}", n);
-    println!("{}", n.is_chance());
-    // let mut game = PostFlopGame::new([oop_range, ip_range], board,tree).unwrap();
+    tree.apply_history(&[Action::Bet(20), Action::Raise(60), Action::AllIn(100)]).unwrap();
+    let current_node = tree.current_node();
+    println!("{:?}", current_node);
+    let mut game = PostFlopGame::new([oop_range, ip_range], board,tree).unwrap();
 
-    // let (uncompressed, compressed) = game.memory_usage();
-    // println!("Uncompressed mem usage {} bytes", uncompressed);
-    // println!("Compressed mem usage {} bytes", compressed);
+    let (uncompressed, compressed) = game.memory_usage();
+    println!("Uncompressed mem usage {} bytes", uncompressed);
+    println!("Compressed mem usage {} bytes", compressed);
     
     // game.allocate_memory(false);
 

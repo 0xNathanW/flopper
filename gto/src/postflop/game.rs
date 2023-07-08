@@ -1,4 +1,4 @@
-use crate::{game::Game, latch::LatchGuard, Street, action::TreeConfig};
+use crate::{game::Game, latch::LatchGuard, Street};
 use super::{PostFlopNode, PostFlopGame, ProcessState};
 
 impl Game for PostFlopGame {
@@ -84,23 +84,5 @@ impl Game for PostFlopGame {
 
     fn compression_enabled(&self) -> bool {
         self.compression_enabled
-    }
-}
-
-impl PostFlopGame {
-
-    // Memory usage in bytes uncompressed and compressed.
-    pub fn memory_usage(&self) -> (u64, u64) {
-        if self.state <= ProcessState::Uninitialised {
-            panic!("Game not initialised");
-        }
-
-        let elems = 2 * self.num_storage + self.num_storage_ip + self.num_storage_chance;
-        (4 * elems + self.misc_memory_usage, 2 * elems + self.misc_memory_usage)
-    }
-
-
-    pub fn tree_config(&self) -> &TreeConfig {
-        &self.tree_config
     }
 }

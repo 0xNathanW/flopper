@@ -1,16 +1,65 @@
 
 export const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
 export const SUITS = ["♣", "♦", "♥", "♠"];
+const suitClasses = [
+    "text-green-600",
+    "text-blue-600",
+    "text-pink-600",
+    "text-black",
+  ];
 
 export function cardToIdx(card: string): number {
     return (12 - RANKS.indexOf(card[0])) * 4 + SUITS.indexOf(card[1]);
-}
+};
 
 export function idxToCard(idx: number): string {
     const rank = RANKS[12 - Math.floor(idx / 4)];
     const suit = "♣♦♥♠"[idx % 4];
     return rank + suit;
-}
+};
+
+const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J","Q", "K", "A"];
+
+export const cardText = (card: number) => {
+    return {
+      rank: ranks[card >>> 2],
+      suit: SUITS[card & 3],
+      colorClass: suitClasses[card & 3],
+    };
+};
+
+export const cardPairCellIndex = (card1: number, card2: number) => {
+    if (card1 > card2) [card1, card2] = [card2, card1];
+    const hr = card2 >>> 2;
+    const lr = card1 >>> 2;
+    const hs = card2 & 3;
+    const ls = card1 & 3;
+    const isSuited = hs === ls;
+    return {
+      row: 12 - (isSuited ? hr : lr),
+      col: 12 - (isSuited ? lr : hr),
+      index: isSuited
+        ? 3 - hs
+        : hr === lr
+        ? 6 - ((ls * (5 - ls)) / 2 + hs)
+        : 11 - (3 * hs + ls - +(hs < ls)),
+    };
+};
+  
+export const cardPairOrder = (pair: number) => {
+    let card1 = pair & 0xff;
+    let card2 = pair >>> 8;
+    if (card2 === 0xff) return card1;
+    if (card1 > card2) [card1, card2] = [card2, card1];
+    const hr = card2 >>> 2;
+    const lr = card1 >>> 2;
+    let hs = card2 & 3;
+    let ls = card1 & 3;
+    const isPair = hr === lr;
+    const isSuited = hs === ls;
+    if (isPair) [hs, ls] = [ls, hs];
+    return ((((hr * 2 + +isPair) * 2 + +isSuited) * 16 + lr) * 4 + hs) * 4 + ls;
+};
 
 export function suitColour(suit: string): string {
     if (suit === "♦") {
@@ -22,7 +71,53 @@ export function suitColour(suit: string): string {
     } else {
         return "text-black";
     }
-}
+};
+
+export function rgbToString(colour :{
+    r: number;
+    g: number;
+    b: number;
+}) {
+    const red = colour.r.toString(16).padStart(2, "0");
+    const green = colour.g.toString(16).padStart(2, "0");
+    const blue = colour.b.toString(16).padStart(2, "0");
+    return `#${red}${green}${blue}`;
+};
+
+export function average(vals: number[], weights: number[]) {
+    let sum = 0;
+    let totalWeight = 0;
+    for (let i = 0; i < vals.length; ++i) {
+        sum += vals[i] * weights[i];
+        totalWeight += weights[i];
+    }
+    return sum / totalWeight;
+}; 
+
+export const toFixed1 = (value: number) => {
+    if (!isFinite(value)) return (value < 0 ? "-" : "") + "∞";
+    if (-0.05 < value && value < 0.05) return "0.0";
+    return value.toFixed(1);
+};
+
+export const toFixed2 = (value: number) => {
+    if (-0.005 < value && value < 0.005) return "0.00";
+    return value.toFixed(2);
+};
+
+export const toFixed3 = (value: number) => {
+    if (-0.0005 < value && value < 0.0005) return "0.000";
+    return value.toFixed(3);
+};
+
+export const toFixed = [toFixed1, toFixed2, toFixed3];
+
+export const toFixedAdaptive = (value: number) => {
+    const abs = Math.abs(value);
+    if (abs < 10) return toFixed3(value);
+    if (abs < 100) return toFixed2(value);
+    return toFixed1(value);
+};
 
 export function textToRange(text: string): number[] {
 
@@ -113,7 +208,7 @@ export function textToRange(text: string): number[] {
         }
     }
     return weights;
-}
+};
 
 // validity: 0 = empty, 1 = valid, 2 = invalid
 export function verifyBetTxt(s: string, raise: boolean): {text: string, validity: number} {
@@ -126,6 +221,7 @@ export function verifyBetTxt(s: string, raise: boolean): {text: string, validity
         return !(bet === "")
     });
 
+    // No bets.
     if (trimmed.length === 0) {
         return {text: "", validity: 0};
     }
@@ -185,4 +281,4 @@ export function verifyBetTxt(s: string, raise: boolean): {text: string, validity
     };
 
     return {text: trimmed.join(", "), validity: 1};
-}
+};

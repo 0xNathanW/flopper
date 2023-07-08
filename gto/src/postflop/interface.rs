@@ -3,7 +3,7 @@ use crate::{
     game::Game, 
     latch::{LatchGuard, Latch}, 
     node::GameNode, Street, 
-    action::Action, 
+    action::{Action, TreeConfig}, 
     cfv::{normalised_stategy_compressed, normalised_strategy}, 
     slice_ops::*, player::PLAYER_IP
 };
@@ -201,7 +201,7 @@ impl PostFlopGame {
         }
         &self.hands[player]
     }
-
+    
     // Amount each player has bet.
     pub fn total_bet_amount(&self) -> [i32; 2] {
         self.total_bet_amount
@@ -578,6 +578,21 @@ impl PostFlopGame {
         });
 
         out
+    }
+
+    // Memory usage in bytes uncompressed and compressed.
+    pub fn memory_usage(&self) -> (u64, u64) {
+        if self.state <= ProcessState::Uninitialised {
+            panic!("Game not initialised");
+        }
+
+        let elems = 2 * self.num_storage + self.num_storage_ip + self.num_storage_chance;
+        (4 * elems + self.misc_memory_usage, 2 * elems + self.misc_memory_usage)
+    }
+
+
+    pub fn tree_config(&self) -> &TreeConfig {
+        &self.tree_config
     }
 
     pub fn weights(&self, player: usize) -> &[f32] {

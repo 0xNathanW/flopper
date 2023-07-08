@@ -1,380 +1,329 @@
 
 <script setup lang="ts">
-    import { useConfigStore } from '../store';
+    import { computed, ref } from 'vue';
+    import { useConfigStore, useStore } from '../store';
     import * as rust from '../rust_funcs';
-    import { ActionNode, RootNode, ChanceNode, PlayerNode, TerminalNode } from '../node_types';
-    import { computed, nextTick, ref } from 'vue';
-
+    
     const config = useConfigStore();
-    let locked = false;
-    const navDiv = ref(null as HTMLDivElement | null);
+    const app = useStore();
 
-    const treeError = !(await rust.newActionTree(
-        config.board,
-        config.startingPot,
-        config.effectiveStack,
-        config.rake,
-        config.rakeCap,
-        config.addAllInThreshold,
-        config.forceAllInThreshold,
-        
-        config.betSizes[0][0][0],
-        config.betSizes[0][0][1],
-        config.betSizes[0][1][0],
-        config.betSizes[0][1][1],
-        config.betSizes[0][2][0],
-        config.betSizes[0][2][1],
+    type BuildState = 'idle' | 'building' | 'built';
+    const buildState = ref<BuildState>('idle');
+    const gameTreeBuilt = ref(false);
+    const status = ref(["Not Built", "warning"]);
 
-        config.betSizes[1][0][0],
-        config.betSizes[1][0][1],
-        config.betSizes[1][1][0],
-        config.betSizes[1][1][1],
-        config.betSizes[1][2][0],
-        config.betSizes[1][2][1],
-    ));
+    const numThreads = ref(navigator.hardwareConcurrency || 1);
+    const targetDelta = ref(0.5);
+    const maxIters = ref(1000);
     
-    const rootNode: RootNode = {
-        type: "root",
-        idx: 0,
-        player: config.board.length === 3 ? "flop" : config.board.length === 4 ? "turn" : "river",
-        selectedIdx: -1,
-        board: config.board,
-        pot: config.startingPot,
-        stack: config.effectiveStack,
-    };
-
-    const nodes = ref<ActionNode[]>([rootNode]);
-    const selectedNodeIdx = ref(-1);
-    const betAmount = ref(0);
-    const prevBetAmount = ref(0);
-    const totalBetAmount = ref([0, 0]);
-
-    const isSelectedTerminal = computed(() => {
-        if (locked || selectedNodeIdx.value === -1) return false;
-        const selectedNode = nodes.value[selectedNodeIdx.value];
-        return selectedNode.type === "terminal";
-    });
-
-    const afterAllIn = computed(() => {
-        const maxTotalBetAmount = Math.max(...totalBetAmount.value);
-        return maxTotalBetAmount === config.effectiveStack;
-    });
-
-    const maxAmount = computed(() => {
-        if (isSelectedTerminal.value) return 0;
-        const maxTotalBetAmount = Math.max(...totalBetAmount.value);
-        return config.effectiveStack - (maxTotalBetAmount - prevBetAmount.value);
-    });
+    const memUncompressed = ref(0);
+    const memCompressed = ref(0);
+    const compression = ref(false);
     
-    const minAmount = computed(() => {
-        const betMinus = config.effectiveStack - maxAmount.value;
-        const min = Math.min(...totalBetAmount.value) - betMinus;
-        const max = Math.max(...totalBetAmount.value) - betMinus;
-        return Math.min(Math.max(2 * max - min, 1), maxAmount.value);
-    });
-    
-    const amountRate = computed(() => {
-        const pot = config.startingPot + 2 * Math.max(...totalBetAmount.value);
-        const amount = betAmount.value - prevBetAmount.value;
-        return amount / pot;
+    const memUsageCompressedString = computed(() => {
+        return memCompressed.value >= 1023.5 * 1024 * 1024 
+        ? (memCompressed.value / (1024 * 1024 * 1024)).toFixed(2) + " GB" 
+        : (memCompressed.value / (1024 * 1024)).toFixed(0) + " MB";
     });
 
-    const encodeLine = (spotIndex: number) => {
-        const ret: string[] = [];
-        for (let i = 1; i < spotIndex; ++i) {
-            const spot = nodes.value[i];
-            if (spot.type === "player") {
-            const action = spot.actions[spot.selectedIdx];
-            if (action.name === "Fold") {
-                ret.push("F");
-            } else if (action.name === "Check") {
-                ret.push("X");
-            } else if (action.name === "Call") {
-                ret.push("C");
-            } else if (action.name === "Bet") {
-                ret.push("B" + action.amount);
-            } else if (action.name === "Raise") {
-                ret.push("R" + action.amount);
-            } else if (action.name === "Allin") {
-                ret.push("A" + action.amount);
-            }
-            }
-        }
-        return ret;
-    };
+    const memUsageUncompressedString = computed(() => {
+        return memUncompressed.value >= 1023.5 * 1024 * 1024 
+        ? (memUncompressed.value / (1024 * 1024 * 1024)).toFixed(2) + " GB" 
+        : (memUncompressed.value / (1024 * 1024)).toFixed(0) + " MB";
+    });
 
-    const pushResultsTerminal = () => {
-        const prevNode = nodes.value[selectedNodeIdx.value - 1] as PlayerNode;
-        const prevAction = prevNode.actions[prevNode.selectedIdx];
-        let equityOOP = -1;
-        if (prevAction.name === "Fold") {
-            equityOOP = prevNode.player === "oop" ? 0 : 1;
-        }
+    const osName = ref<Awaited<ReturnType<typeof rust.osName>> | null>(null);
+    const availableMem = ref(0);
+    const totalMem = ref(0);
+    const maxMemUsage = ref(0);
 
-        nodes.value.push({
-            type: "terminal",
-            idx: selectedNodeIdx.value,
-            player: "end",
-            selectedIdx: -1,
-            prevPlayer: prevNode.player,
-            equityOOP,
-            pot: config.startingPot + totalBetAmount.value[0] + totalBetAmount.value[1],
-        });
-    };
+    const buildGameTree = async () => {
+        gameTreeBuilt.value = false;
+        buildState.value = 'building';
 
-    const pushResultsChance = async () => {
-        type TurnNode = RootNode | ChanceNode;
-        const prevNode = nodes.value[selectedNodeIdx.value - 1] as PlayerNode;
-        const turnNode = nodes.value.find((node) => node.player === "turn") as TurnNode | undefined;
-        const nxtActions = await rust.getActions();
-
-        nodes.value.push(
-            {
-                type: "chance",
-                idx: selectedNodeIdx.value,
-                player: turnNode ? "river" : "turn",
-                selectedIdx: -1,
-                prevPlayer: prevNode.player,
-                cards: Array.from({ length: 52 }, (_, i) => ({
-                    card: i,
-                    selected: false,
-                    dead: true,
-                })),
-                pot: config.startingPot + 2 * totalBetAmount.value[0],
-                stack: config.effectiveStack - totalBetAmount.value[0],
-            },
-            {
-                type: "player",
-                idx: selectedNodeIdx.value + 1,
-                player: "oop",
-                selectedIdx: -1,
-                actions: nxtActions.map((action, i) => {
-                    const [name, amount] = action.split(":");
-                    return {
-                        idx: i,
-                        name,
-                        amount,
-                        rate: -1,
-                        selected: false,
-                        colour: "#000",
-                    };
-                }),
-            }
+        const err = await rust.buidGameTree(
+            config.board,
+            config.oopRange,
+            config.ipRange,
+            config.startingPot,
+            config.effectiveStack,
+            config.rake / 100,
+            config.rakeCap,
+            config.addAllInThreshold / 100,
+            config.forceAllInThreshold / 100,
+            config.betSizes[0][0][0],
+            config.betSizes[0][0][1],
+            config.betSizes[0][1][0],
+            config.betSizes[0][1][1],
+            config.betSizes[0][2][0],
+            config.betSizes[0][2][1],
+            config.betSizes[1][0][0],
+            config.betSizes[1][0][1],
+            config.betSizes[1][1][0],
+            config.betSizes[1][1][1],
+            config.betSizes[1][2][0],
+            config.betSizes[1][2][1],
         );
-    };
 
-    const pushResultsPlayer = async () => {
-        const prevNode = nodes.value[selectedNodeIdx.value - 1];
-        const player = prevNode.player === "oop" ? "ip" : "oop";
-        const actions = await rust.getActions();
-
-        nodes.value.push({
-            type: "player",
-            idx: selectedNodeIdx.value,
-            player,
-            selectedIdx: -1,
-            actions: actions.map((action, i) => {
-                const [name, amount] = action.split(":");
-                return {
-                    idx: i,
-                    name,
-                    amount,
-                    selected: false,
-                    colour: "#000",
-                };
-            }),
-        });
-    };
-
-    const selectNode = async (nodeIdx: number, splice: boolean, rebuild: boolean, updateAmount: boolean) => {
-
-        if (!splice && !rebuild && nodeIdx === selectedNodeIdx.value) return;
-
-        if (nodeIdx === 0) {
-            await selectNode(1, true, false, selectedNodeIdx.value !== -1);
+        if (err) {
+            buildState.value = 'idle';
+            status.value = ["Error: " + err, "error"];
             return;
         }
 
-        if (!splice && nodes.value[nodeIdx]?.type === "chance") {
-            await selectNode(nodeIdx + 1, false, true, false);
-            return;
-        }
-
-        locked = true;
-
-        if (rebuild) {
-            
-            const selectedNodeIdxTemp = selectedNodeIdx.value;
-            const line = encodeLine(nodes.value.length - 1);
-            nodes.value = [rootNode];
-
-            selectedNodeIdx.value = 1;
-            totalBetAmount.value = [0, 0];
-
-            await rust.toRoot();
-            await pushResultsPlayer();
-
-            for (let i = 0; i < line.length; ++i) {
-                
-                const idx = await rust.play(line[i]);
-                if (idx === -1) {
-                    updateAmount = false;
-                    break;
-                }
-
-                const node = nodes.value[selectedNodeIdx.value] as PlayerNode;
-                const action = node.actions[idx];
-                node.selectedIdx = idx;
-                action.selected = true;
-                ++selectedNodeIdx.value;
-                totalBetAmount.value = await rust.totalBetAmount();
-
-                if (await rust.isTerminalNode()) {
-                    pushResultsTerminal();
-                } else if (await rust.isChanceNode()) {
-                    await pushResultsChance();
-                    ++selectedNodeIdx.value;
-                } else {
-                    await pushResultsPlayer();
-                }
-            }
-            
-            if (selectedNodeIdxTemp < selectedNodeIdx.value) {
-                selectedNodeIdx.value = selectedNodeIdxTemp;
-            }
+        [memUncompressed.value, memCompressed.value] = await rust.memoryUsageGame();
+        osName.value = await rust.osName();
+        [availableMem.value, totalMem.value] = await rust.memory();
         
+        if (osName.value === 'macos') {
+            maxMemUsage.value = totalMem.value * 0.7;
         } else {
-            selectedNodeIdx.value = nodeIdx;
+            maxMemUsage.value = availableMem.value;
         }
 
-        const line = encodeLine(selectedNodeIdx.value);
-        await rust.applyHistory(line);
-        totalBetAmount.value = await rust.totalBetAmount();
+        if (memUncompressed.value > maxMemUsage.value && memCompressed.value <= maxMemUsage.value) {
+            compression.value = true;
+        } else {
+            compression.value = true;
+        }
 
-        if (splice) {
-            nodes.value.splice(selectedNodeIdx.value);
-            if (await rust.isTerminalNode()) {
-                pushResultsTerminal();
-            } else if (await rust.isChanceNode()) {
-                await pushResultsChance();
-                ++selectedNodeIdx.value;
-            } else {
-                await pushResultsPlayer();
+        gameTreeBuilt.value = true;
+        buildState.value = 'built';
+        status.value = ["Built Successfully", "success"];
+        app.treeHash = config.configHash;
+
+        app.solverRunning = false;
+        app.solverPaused = false;
+        app.solverFinished = false;
+        app.solverError = false;
+    }
+
+    const terminateFlag = ref(false);
+    const pauseFlag = ref(false);
+    const currentIter = ref(-1);
+    const currentDelta = ref(Number.POSITIVE_INFINITY);
+    const timeElapsed = ref(-1);
+
+    let timeStart = 0;
+    let deltaUpdated = false;
+
+    const runSolver = async () => {
+
+        terminateFlag.value = false;
+        pauseFlag.value = false;
+        
+        currentIter.value = -1;
+        currentDelta.value = Number.POSITIVE_INFINITY;
+        timeElapsed.value = -1;
+        app.solverRunning = true;
+        timeStart = performance.now();
+
+        await rust.setNumThreads(numThreads.value);
+        await rust.allocateMemoryGame(compression.value);
+
+        currentIter.value = 0;
+        currentDelta.value = Math.max(await rust.exploitabilityGame(), 0);
+        deltaUpdated = true;
+
+        await resumeSolver();
+    };
+
+    const resumeSolver = async () => {
+        app.solverRunning = true;
+        app.solverPaused = false;
+
+        if (timeStart === 0) {
+            timeStart = performance.now();
+            await rust.setNumThreads(numThreads.value);
+        }
+
+        const target = (config.startingPot * targetDelta.value) / 100;
+
+        while (!terminateFlag.value && currentIter.value < maxIters.value && currentDelta.value > target) {
+
+            if (pauseFlag.value) {
+                const timePaused = performance.now();
+                timeElapsed.value += timePaused - timeStart;
+                timeStart = 0;
+                pauseFlag.value = false;
+                app.solverRunning = false;
+                app.solverPaused = true;
+                return;
+            }
+
+            await rust.solveStepGame(currentIter.value);
+            ++currentIter.value;
+            deltaUpdated = false;
+
+            if (currentIter.value % 10 === 0) {
+                currentDelta.value = Math.max(await rust.exploitabilityGame(), 0);
+                deltaUpdated = true;
             }
         }
 
-        const prev = nodes.value[selectedNodeIdx.value - 1];
-        if (prev.type === "player") {
-            prevBetAmount.value = Number(prev.actions[prev.selectedIdx].amount);
+        if (!deltaUpdated) {
+            currentDelta.value = Math.max(await rust.exploitabilityGame(), 0);
+        }
+
+        app.solverRunning = false;
+        await rust.finaliseGame();
+        app.solverFinished = true;
+
+        const timeEnd = performance.now();
+        timeElapsed.value = timeEnd - timeStart;
+    };
+
+    const exploitabilityText = computed(() => {
+        if (!Number.isFinite(currentDelta.value)) {
+            return "";
         } else {
-            prevBetAmount.value = 0;
+            const percent = ((currentDelta.value * 100) / config.startingPot).toFixed(2);
+            return `Exploitability: ${currentDelta.value.toFixed(2)} (${percent}%)`
         }
+    });
 
-        if (updateAmount) {
-            betAmount.value = minAmount.value;
-        }
-
-        locked = false;
-        // navScroll();
-    };
-
-    const play = async (nodeIdx: number, actionIdx: number) => {
-        const node = nodes.value[nodeIdx] as PlayerNode;
-
-        if (node.selectedIdx !== -1) {
-            node.actions[node.selectedIdx].selected = false;
-        }
-
-        node.actions[actionIdx].selected = true;
-        node.selectedIdx = actionIdx;
-        await selectNode(nodeIdx + 1, true, false, true);
-    };
-
-    // const navScroll = async () => {
-    //     await nextTick();
-    //     if (navDiv.value) {
-    //         const selectedChild = navDiv.value.children[selectedNodeIdx.value];
-    //         if (selectedChild) {
-    //             selectedChild.scrollIntoView({
-    //                 behavior: "smooth",
-    //                 inline: "center",
-    //             });
-    //         }
-    //     }
-    // };
-
-    await selectNode(0, true, false, true);
 </script>
 
 <template>
 
-    <div v-if="treeError">
-        Dafaq Happened!!!
-    </div>
+    <div class="flex w-full justify-center">
+        <div class="flex flex-col gap-5">
 
-    <div 
-        v-else-if="!treeError"
-        ref="navDiv"
-        class="flex flex-row h-40 gap-2 p-1 whitespace-nowrap overflow-x-auto snug"
-    >
-        <div
-            v-for="node in nodes"
-            :key="node.idx"
-            class="flex flex-col h-full p-1 justify-start border-2 rounded-md border-neutral"
-            @click="selectNode(node.idx, false, false, true)"
-        >
+            <div class="grid grid-cols-[7rem,10rem] gap-5">
+                <button
+                    class="btn btn-primary btn-sm col-span-2"
+                    :disabled="buildState === 'building'"
+                    @click="buildGameTree"
+                >
+                    Build Game Tree
+                </button>
+
+                <p>Status: </p>
+                <div :class="'badge badge-' + status[1]">
+                    {{ status[0] }}
+                </div>
+
+                <p v-if="gameTreeBuilt">ID: </p>
+                <div v-if="gameTreeBuilt" class="badge badge-info">
+                    {{ app.treeHash }}
+                </div>
+            </div>
+
+            <div v-if="gameTreeBuilt" class="flex flex-col gap-5">
+                <div class="divider my-0"></div>
+                <h1 class="text-2xl font-bold">Run Solver</h1>
             
-            <!-- Root/Chance -->
-            <template v-if="node.type === 'root' || node.type === 'chance'">
-                <div class="p-1 font-semibold group-hover:opacity-100 opacity-70">
-                    {{ node.player.toUpperCase() }}
+                <div class="flex flex-row gap-4 items-center">
+                    <p>Number of threads: </p>
+                    <input
+                        class="input input-bordered w-20 input-sm text-center"
+                        v-model="numThreads"
+                        type="number"
+                        min="1"
+                        max="64"
+                    />
                 </div>
-                <div class="flex flex-col flex-grow px-3 items-center justify-evenly font-semibold">
-                    <div class="group-hover:opacity-100 opacity-70">
-                        <div>Pot: {{ node.pot }}</div>
-                        <div>Stack: {{ node.stack }}</div>
+
+                <div>
+                    <p class="mb-2">Select precision mode: </p>
+                    <div class="form-control">
+                        <label class="label cursor-pointer">
+                            <span class="label-text">32-bit: {{ memUsageUncompressedString }}</span>
+                            <input
+                                class="radio radio-primary"
+                                type="radio"
+                                name="radio-10"
+                                v-model="compression"
+                                :value="false"
+                            />
+                        </label>
+                    </div>
+                    <div class="form-control">
+                        <label class="label cursor-pointer">
+                            <span class="label-text">16-bit: {{ memUsageCompressedString }}</span>
+                            <input
+                                class="radio radio-primary"
+                                type="radio"
+                                name="radio-10"
+                                v-model="compression"
+                                :value="true"
+                            />
+                        </label>
                     </div>
                 </div>
-            </template>
 
-            <!-- Player -->
-            <template v-else-if="node.type === 'player'">
-                <div class="px-1 py-1 font-semibold group-hover:opacity-100">
-                    {{ node.player.toUpperCase() }}
+                <div class="flex flex-row gap-4 items-center">
+                    <p>Target delta: </p>
+                    <input
+                        class="input input-bordered w-20 input-sm text-center"
+                        v-model="targetDelta"
+                        type="number"
+                        min="0.05"
+                        step="0.05"
+                    />
+                    <p>%</p>
                 </div>
-                <div class="flex-grow overflow-y-auto">
-                    <button
-                        v-for="action in node.actions"
-                        :key="action.idx"
-                        :class="'flex w-full px-1 rounded-md transition-colors hover:bg-blue-100' +
-                            (action.selected ? ' bg-blue-100' : '')"
-                        @click.stop="play(node.idx, action.idx)"
+
+                <div class="flex flex-row gap-4 items-center">
+                    <p>Max iterations: </p>
+                    <input
+                        class="input input-bordered w-30 input-sm text-center"
+                        v-model="maxIters"
+                        type="number"
+                        min="1"
+                    />
+                </div>
+
+                <div class="flex flex-row gap-4 items-center">
+
+                    <button 
+                        class="btn btn-primary"
+                        @click="runSolver"
+                        :disabled="app.solverRunning || app.solverRun"
                     >
-                        {{ action.name }}
-                        {{ action.amount === "0" ? "" : action.amount }}
+                        Run Solver
                     </button>
-                    <div
-                        v-if="node.actions.length === 0"
-                        :class="'flex w-full px-1 font-semibold group-hover:opacity-100 ' 
-                        + (node.idx === selectedNodeIdx ? '' : 'opacity-70')"
-                    >
-                        No Actions
-                    </div>
-                </div>
-            </template>
 
-            <!-- Terminal -->
-            <template v-else-if="node.type === 'terminal'">
-                <div class="px-1 pt-1 pb-0.5 font-semibold group-hover:opacity-100">
-                    {{ node.player.toUpperCase() }}
+                    <button
+                        class="btn btn-primary"
+                        :disabled="!app.solverRunning"
+                        @click="() => (pauseFlag = true)"
+                    >
+                        Pause
+                    </button>
+
+                    <button
+                        class="btn btn-primary"
+                        :disabled="!app.solverPaused"
+                        @click="resumeSolver"
+                    >
+                        Resume
+                    </button>
                 </div>
-                <div class="flex flex-col flex-grow justify-evenly font-semibold group-hover:opacity-100">
-                    <div v-if="node.equityOOP === 0 || node.equityOOP === 1" class="px-3">
-                        {{ ["IP", "OOP"][node.equityOOP] }} Wins
-                    </div>
-                    <div class="px-3">Pot: {{ node.pot }}</div>
+
+            </div>
+
+            <div v-if="app.solverRun">
+                <div class="flex flex-row items-center">
+                    <span v-if="app.solverRunning" className="loading loading-spinner loading-xs"></span>
+                    {{ 
+                        app.solverRunning 
+                        ? "Running Solver" 
+                        : app.solverPaused 
+                        ? "Solver Paused"
+                        : app.solverError 
+                        ? "Solver Error"
+                        : "Solver Finished" 
+                    }}
                 </div>
-            </template>
+
+                {{ currentIter === -1 ? "Allocationg Memory" : `Iteration: ${currentIter}` }}
+                
+                {{ exploitabilityText }}
+
+                {{ (timeElapsed === -1 || !app.solverFinished) ? "" : `Time: ${(timeElapsed / 1000).toFixed(2)}s`}}
+
+            </div>
         </div>
     </div>
 </template>

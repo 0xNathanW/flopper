@@ -71,6 +71,29 @@ pub fn solve<G: Game>(game: &mut G, max_iters: u32, target_exploitablility: f32)
     exploitability
 }
 
+// Runs a single iteration of CFR+ algorithm.
+pub fn solve_step<G: Game>(game: &G, i: u32) {
+    
+    if game.solved() || !game.ready() {
+        panic!("Game not ready or already solved");
+    }
+
+    let mut root = game.root();
+    let params = DiscountParams::new(i);
+
+    for player in 0..2 {
+        let mut result = Vec::with_capacity(game.num_private_hands(player));
+        solve_cfv(
+            game,
+            &mut root,
+            result.spare_capacity_mut(),
+            player,
+            game.intial_weights(player ^ 1),
+            &params,
+        );
+    }
+}
+
 fn solve_cfv<G: Game>(
     game: &G,
     node: &mut G::Node,
@@ -303,7 +326,7 @@ fn regret_matching_compressed(regret: &[i16], num_actions: usize) -> Vec<f32> {
     strategy
 }
 
-fn finalise<G: Game>(game: &mut G) {
+pub fn finalise<G: Game>(game: &mut G) {
     
     for player in 0..2 {
         let mut cfv = Vec::with_capacity(game.num_private_hands(player));
