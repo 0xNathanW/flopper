@@ -1,30 +1,19 @@
 
-export const RANKS = ['A', 'K', 'Q', 'J', 'T', '9', '8', '7', '6', '5', '4', '3', '2'];
+export const RANKS = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J", "Q", "K", "A"];
 export const SUITS = ["♣", "♦", "♥", "♠"];
+
 const suitClasses = [
     "text-green-600",
     "text-blue-600",
     "text-pink-600",
     "text-black",
-  ];
-
-export function cardToIdx(card: string): number {
-    return (12 - RANKS.indexOf(card[0])) * 4 + SUITS.indexOf(card[1]);
-};
-
-export function idxToCard(idx: number): string {
-    const rank = RANKS[12 - Math.floor(idx / 4)];
-    const suit = "♣♦♥♠"[idx % 4];
-    return rank + suit;
-};
-
-const ranks = ["2", "3", "4", "5", "6", "7", "8", "9", "T", "J","Q", "K", "A"];
+];
 
 export const cardText = (card: number) => {
     return {
-      rank: ranks[card >>> 2],
-      suit: SUITS[card & 3],
-      colorClass: suitClasses[card & 3],
+        rank: RANKS[card >>> 2],
+        suit: SUITS[card & 3],
+        colourClass: suitClasses[card & 3],
     };
 };
 
@@ -121,6 +110,7 @@ export const toFixedAdaptive = (value: number) => {
 
 export function textToRange(text: string): number[] {
 
+    const ranks_rev = RANKS.slice().reverse();
     const weights = Array(169).fill(0);
     const elems = text
         .replace(/\s*([-:,])\s*/g, '$1')
@@ -130,8 +120,8 @@ export function textToRange(text: string): number[] {
     for (let elem of elems) {
   
         if (elem.includes('+')) {
-            const idx1 = RANKS.indexOf(elem[0]);
-            const idx2 = RANKS.indexOf(elem[1]);
+            const idx1 = ranks_rev.indexOf(elem[0]);
+            const idx2 = ranks_rev.indexOf(elem[1]);
             
             // Pair+
             if (elem.length === 3) {
@@ -156,11 +146,11 @@ export function textToRange(text: string): number[] {
             
             const split = elem.split('-');
 
-            const idx11 = RANKS.indexOf(split[0][0]);
-            const idx12 = RANKS.indexOf(split[0][1]);
+            const idx11 = ranks_rev.indexOf(split[0][0]);
+            const idx12 = ranks_rev.indexOf(split[0][1]);
 
-            const idx21 = RANKS.indexOf(split[1][0]);
-            const idx22 = RANKS.indexOf(split[1][1]);
+            const idx21 = ranks_rev.indexOf(split[1][0]);
+            const idx22 = ranks_rev.indexOf(split[1][1]);
 
             // Pair-Pair
             if (split[0].length === 2) {
@@ -188,8 +178,8 @@ export function textToRange(text: string): number[] {
             }
         } else {
 
-            const idx1 = RANKS.indexOf(elem[0]);
-            const idx2 = RANKS.indexOf(elem[1]);
+            const idx1 = ranks_rev.indexOf(elem[0]);
+            const idx2 = ranks_rev.indexOf(elem[1]);
 
             // Pair
             if (elem.length === 2) {
@@ -281,4 +271,13 @@ export function verifyBetTxt(s: string, raise: boolean): {text: string, validity
     };
 
     return {text: trimmed.join(", "), validity: 1};
+};
+
+export function contrastText(bgColor: string, lightColor: string, darkColor: string) {
+    var color = (bgColor.charAt(0) === '#') ? bgColor.substring(1, 7) : bgColor;
+    var r = parseInt(color.substring(0, 2), 16); // hexToR
+    var g = parseInt(color.substring(2, 4), 16); // hexToG
+    var b = parseInt(color.substring(4, 6), 16); // hexToB
+    return (((r * 0.299) + (g * 0.587) + (b * 0.114)) > 186) ?
+      darkColor : lightColor;
 };

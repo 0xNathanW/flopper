@@ -930,18 +930,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "flopper"
-version = "0.0.0"
-dependencies = [
- "gto",
- "poker",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
-]
-
-[[package]]
 name = "fnv"
 version = "1.0.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"

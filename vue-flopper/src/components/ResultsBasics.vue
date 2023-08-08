@@ -1,12 +1,13 @@
 
 <script setup lang="ts">
     import { computed, onUnmounted, ref, toRefs, watch } from 'vue';
-    import { useConfigStore } from '../store';
-    import { ChanceNode, HoverContent, Results, ResultsOpts, PlayerNode } from '../typing';
-    import { cardPairCellIndex, rgbToString, toFixed, toFixed1 } from '../util';
+    import { useConfigStore, useStore } from '../store';
+    import { ChanceNode, HoverContent, Results, DisplayOpts, PlayerNode } from '../typing';
+    import { cardPairCellIndex, contrastText, rgbToString, toFixed, toFixed1 } from '../util';
     import { ActionNode } from '../typing';
 
     const config = useConfigStore();
+    const store = useStore();
 
     const yellow500 = "#eab308";
     const colorGradient = [
@@ -26,7 +27,7 @@
         currentBoard: number[];
         results: Results;
         totalBetAmount: number[];
-        resultsOpts: ResultsOpts;
+        displayOpts: DisplayOpts;
         displayPlayer: "oop" | "ip";
         isCompareMode: boolean;
     }>();
@@ -120,7 +121,7 @@
 
     const numActions = computed(() => {
         return (
-            (props.resultsOpts.strategy === "show" &&
+            (props.displayOpts.strategy === "show" &&
             props.displayPlayer === props.selectedNode.player &&
             !props.selectedChance &&
             props.results.numActions) || 0
@@ -129,18 +130,14 @@
 
     const cellData = computed(() => {
         const results = props.results;
-        const opts = props.resultsOpts;
+        const opts = props.displayOpts;
         const player = props.displayPlayer;
-        const suitsIndividual = opts.suit === "individual";
 
         const data = Array.from({ length: 13 * 13 }, (_, i) => {
             const row = Math.floor(i / 13);
             const col = i % 13;
 
             let len = 1;
-            if (suitsIndividual) {
-                len = row === col ? 6 : row < col ? 4 : 12;
-            }
 
             return Array.from({ length: len }, () => ({
                 idxs: [] as number[],
@@ -165,7 +162,7 @@
             const c2 = pair >> 8;
             const { row, col, index } = cardPairCellIndex(c1, c2);
             const cellIdx = row * 13 + col;
-            const suitIdx = suitsIndividual ? index : 0;
+            const suitIdx = 0;
             const target = data[cellIdx][suitIdx];
 
             target.idxs.push(i);
@@ -218,11 +215,8 @@
     const cellValueText = computed(() => {
         return Array.from({ length: 13 * 13 }, (_, idx) => {
             
-            const resultsOpts = props.resultsOpts;
-            if (
-                resultsOpts.strategy === "show" &&
-                resultsOpts.contentBasics === "default"
-            ) return "";
+            const displayOpts = props.displayOpts;
+            if (displayOpts.strategy === "show" && displayOpts.contentBasics === "default") return "";
 
             const data = cellData.value[idx];
             if (data.length === 0) return "";
@@ -240,11 +234,11 @@
             }
 
             let value;
-            if (resultsOpts.contentBasics === "default") {
+            if (displayOpts.contentBasics === "default") {
                 value = weightSum / cellDenominator.value[idx];
-            } else if (resultsOpts.contentBasics === "eq") {
+            } else if (displayOpts.contentBasics === "eq") {
                 value = equitySum / normaliserSum;
-            } else if (resultsOpts.contentBasics === "ev") {
+            } else if (displayOpts.contentBasics === "ev") {
                 value = evSum / normaliserSum;
             } else {
                 const playerIdx = props.displayPlayer === "oop" ? 0 : 1;
@@ -252,9 +246,9 @@
                 value = evSum / (eqrBase * equitySum);
             }
 
-            if (resultsOpts.contentBasics !== "default" && props.results.empty) {
+            if (displayOpts.contentBasics !== "default" && props.results.empty) {
                 return "-";
-            } else if (resultsOpts.contentBasics === "ev") {
+            } else if (displayOpts.contentBasics === "ev") {
                 return Math.abs(value) >= 999.95
                     ? value.toFixed(0)
                     : toFixedEv.value(value);
@@ -292,12 +286,11 @@
 
     const cellContent = computed(() => {
         const results = props.results;
-        const opts = props.resultsOpts;
+        const opts = props.displayOpts;
         const playerIdx = props.displayPlayer === "oop" ? 0 : 1;
         const empty = results.empty;
         const eqrBase = results.eqrBase[playerIdx];
         const barHeight = opts.barHeight;
-        const suitsIndividual = opts.suit === "individual";
 
         let lowest = 0;
         let middle = 0;
@@ -363,7 +356,7 @@
                 const node = props.selectedNode as PlayerNode;
                 const colours = node.actions.map((action) => action.colour)
                 
-                let bgImage = `linear-gradient(to ${suitsIndividual ? "top" : "right"}`;
+                let bgImage = "linear-gradient(to right";
                 const bgSize = `100% ${height * 100}%`;
 
                 let prevPosition = 0;
@@ -406,17 +399,26 @@
 <template>
     <div class="w-full h-full">
         <table
-            class="w-[500px] h-[500px] tabled-fixed select-none"
+            class="w-full h-full tabled-fixed select-none"
+            :style="{
+                '--font-scale': isCompareMode ? 0.875 : 1,
+                '--pair-font-size':
+                  'calc(max(1rem, min(1.35vw, 2.25vh)) * var(--font-scale))',
+                '--value-font-size':
+                  'calc(max(0.889rem, min(1.2vw, 2vh)) * var(--font-scale))',
+            }"
             @mouseleave="onMouseLeaveTable"
         >
             <tr v-for="row in 13" :key="row">
                 <td
                     v-for="col in 13"
                     :key="col"
-                    class="relative border border-neutral"
-                    @click="onClickCell(row, col)"    
-                    @mouseenter="onMouseEnterCell(row, col)"    
+                    :class="'relative border border-neutral '
+                    + (clickedCellIndex === cellIndex(row, col) ? 'clicked-cell ' : '')"
+                    @click="onClickCell(row, col)"
+                    @mouseenter="onMouseEnterCell(row, col)"
                 >
+                    <!-- Colours representing actions -->
                     <div class="flex absolute w-full h-full left-0 top-0 bg-base-100">
                         <div
                             v-for="(column, k) in columns(row, col)"
@@ -428,17 +430,27 @@
                             }"
                         ></div>
                     </div>
-                    <div class="absolute -top-px left-[0.1875rem] z-10 text-shadow">
+                    <!-- Text ie. AKs -->
+                    <div 
+                        :class="'absolute -top-px left-[0.1875rem] z-10 text-shadow '
+                        + (hasWeight(row, col) ? 'text-' + store.contrastText : 'text-neutral')
+                        "
+                        style="font-size: var(--pair-font-size);"
+                    >
                         {{ cellText(row, col) }}
                     </div>
+                    <!-- Text Info (Ev, Eq etc.) -->
                     <div
-                        class="absolute bottom-px right-1 z-10 text-shadow text-white overflow-hidden"
-                        style="max-width: calc(100% - 0.25rem); font-size: var(--value-font-size); line-height: var(--value-line-height);"                   
+                        :class="'absolute bottom-px right-1 z-10 text-shadow overflow-hidden text-' + store.contrastText"
+                        style="
+                            max-width: calc(100% - 0.25rem); 
+                            font-size: var(--value-font-size);
+                        "                   
                         :data-set="(strTemp = cellValueText[cellIndex(row, col)])"    
                     >
                         {{ strTemp.split(".")[0] }}
                         <span v-if="strTemp.includes('.')">.
-                            <span style="font-size: 85%">
+                            <span style="font-size: 100%">
                                 {{ strTemp.split(".")[1] }}
                             </span>
                         </span>
@@ -449,3 +461,11 @@
     </div>
 </template>
 
+<style scoped>
+.clicked-cell::before {
+  content: "";
+  @apply absolute -left-px -top-px z-10 border-2 border-primary;
+  width: calc(100% + 2px);
+  height: calc(100% + 2px);
+}
+</style>

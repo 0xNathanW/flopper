@@ -24,14 +24,14 @@ export type ChanceReport = {
     strategy: number[];
 };
 
-export const resultPanelList = [
+export const displayModeList = [
     "basics",
     "graphs",
     "compare",
     "chance",
-];
+] as const;
 
-export type ResultsPanel = (typeof resultPanelList)[number];
+export type DisplayMode = (typeof displayModeList)[number];
 
 export const playerBasicsList = ["auto", "oop", "ip"] as const;
 export const playerChanceList = ["auto", "oop", "ip"] as const;
@@ -48,11 +48,10 @@ export const chartChanceList = [
   "eqr",
 ] as const;
 
-export type ResultsOpts = {
+export type DisplayOpts = {
     playerBasics: (typeof playerBasicsList)[number];
     playerChance: (typeof playerChanceList)[number];
     barHeight: (typeof barHeightList)[number];
-    suit: (typeof suitList)[number];
     strategy: (typeof strategyList)[number];
     contentBasics: (typeof contentBasicsList)[number];
     contentGraphs: (typeof contentGraphsList)[number];

@@ -2,13 +2,16 @@
 <script setup lang="ts">
     import { ref } from '@vue/runtime-dom';
     import { useStore } from '../store';
-    import { ActionNode, ChanceNode, Results, ChanceReport, ResultsPanel, ResultsOpts, PlayerNode, HoverContent } from '../typing';
+    import { ActionNode, ChanceNode, Results, ChanceReport, DisplayMode, DisplayOpts, PlayerNode, HoverContent } from '../typing';
     import * as rust from '../rust_funcs';
     import ResultsNavigator from './ResultsNavigator.vue';
     import ResultsBar from './ResultsBar.vue';
-import { computed } from 'vue';
-import ResultsBasics from './ResultsBasics.vue';
-import ResultsTable from './ResultsTable.vue';
+    import { computed } from 'vue';
+    import ResultsBasics from './ResultsBasics.vue';
+    import ResultsTable from './ResultsTable.vue';
+    import ResultsChance from './ResultsChance.vue';
+    import ResultsGraphs from './ResultsGraphs.vue';
+import ResultsCompare from './ResultsCompare.vue';
 
     const app = useStore();
     const solverFinished = ref(false);
@@ -47,33 +50,32 @@ import ResultsTable from './ResultsTable.vue';
     };
 
     const updateNode = (
-        node: ActionNode | null,
-        chance: ChanceNode | null,
-        board: number[],
+        newNode: ActionNode | null,
+        newChance: ChanceNode | null,
+        newBoard: number[],
         newResults: Results,
         newChanceReports: ChanceReport | null,
         newTotalBetAmount: number[]
     ) => {
         dealtCard.value = -1;
-        selectedNode.value = node;
-        selectedChance.value = chance;
-        currentBoard.value = board;
+        selectedNode.value = newNode;
+        selectedChance.value = newChance;
+        currentBoard.value = newBoard;
         results.value = newResults;
         chanceReports.value = newChanceReports;
         totalBetAmount.value = newTotalBetAmount;
         locked.value = false;
-        chanceMode.value = chance?.player ?? "";
+        chanceMode.value = newChance?.player ?? "";
     };
 
     // Bar
 
-    const resultsPanel = ref<ResultsPanel>("basics");
+    const displayMode = ref<DisplayMode>("basics");
     const chanceMode = ref("");
-    const resultsOpts = ref<ResultsOpts>({
+    const displayOpts = ref<DisplayOpts>({
         playerBasics: "auto",
         playerChance: "auto",
         barHeight: "normalised",
-        suit: "grouped",
         strategy: "show",
         contentBasics: "default",
         contentGraphs: "eq",
@@ -82,12 +84,12 @@ import ResultsTable from './ResultsTable.vue';
 
     const copySuccess = ref(0);
 
-    const updateResultsPanel = (newPanel: ResultsPanel) => {
-        resultsPanel.value = newPanel;
+    const updateDisplayMode = (newPanel: DisplayMode) => {
+        displayMode.value = newPanel;
     };
 
-    const updateResultsOpts = (newOpts: ResultsOpts) => {
-        resultsOpts.value = newOpts;
+    const updateDisplayOpts = (newOpts: DisplayOpts) => {
+        displayOpts.value = newOpts;
     };
 
     const autoPlayerBasics = computed(() => {
@@ -115,7 +117,7 @@ import ResultsTable from './ResultsTable.vue';
     });
 
     const displayPlayerBasics = computed(() => {
-        const optionPlayer = resultsOpts.value.playerBasics;
+        const optionPlayer = displayOpts.value.playerBasics;
         if (optionPlayer === "auto") {
             return autoPlayerChance.value;
         } else {
@@ -135,8 +137,7 @@ import ResultsTable from './ResultsTable.vue';
 </script>
 
 <template>
-
-    <div class="flex flex-col h-full">
+    <div class="flex flex-col h-[calc(100vh-5rem)] -mb-20">
 
         <ResultsNavigator
             :handler-updated="handlerUpdated"
@@ -149,17 +150,17 @@ import ResultsTable from './ResultsTable.vue';
         />
 
         <ResultsBar
-            :results-panel="resultsPanel"
+            :display-mode="displayMode"
             :chance-mode="chanceMode"
             :auto-player-basics="autoPlayerBasics"
             :auto-player-chance="autoPlayerChance"
-            @update:results-panel="updateResultsPanel"
-            @update:results-opts="updateResultsOpts"
+            @update:display-mode="updateDisplayMode"
+            @update:display-opts="updateDisplayOpts"
         />
 
         <div v-if="selectedNode && results" class="flex flex-grow min-h-0">
         
-            <template v-if="resultsPanel === 'basics'">
+            <template v-if="displayMode === 'basics'">
                 <ResultsBasics
                     style="flex: 4"
                     :cards="cards"
@@ -168,7 +169,7 @@ import ResultsTable from './ResultsTable.vue';
                     :current-board="currentBoard"
                     :total-bet-amount="totalBetAmount"
                     :results="results"
-                    :results-opts="resultsOpts"
+                    :display-opts="displayOpts"
                     :display-player="displayPlayerBasics"
                     :is-compare-mode="false"
                     @update-hover-content="onUpdateHoverContent"    
@@ -183,9 +184,63 @@ import ResultsTable from './ResultsTable.vue';
                     :display-player="displayPlayerBasics"
                     :hover-content="basicsHoverContent"
                 />
-            </template>    
-        
+            </template>
+
+            <template v-else-if="displayMode === 'graphs'">
+                <ResultsGraphs
+                    :cards="cards"
+                    :selected-node="selectedNode"
+                    :selected-chance="selectedChance"
+                    :results="results"
+                    :chance-reports="chanceReports"
+                    :display-opts="displayOpts"
+                    :display-player="displayPlayerBasics"
+                />
+            </template>
+            
+            <template v-else-if="displayMode === 'compare'">
+                <ResultsBasics
+                    style="flex: 5"
+                    :cards="cards"
+                    :selected-node="selectedNode"
+                    :selected-chance="selectedChance"
+                    :current-board="currentBoard"
+                    :total-bet-amount="totalBetAmount"
+                    :results="results"
+                    :display-opts="displayOpts"
+                    display-player="oop"
+                    :is-compare-mode="true"
+                />
+                <ResultsCompare
+                    style="flex: 2"
+                    :selected-node="selectedNode"
+                    :selected-chance="selectedChance"
+                    :results="results"
+                />
+                <ResultsBasics
+                    style="flex: 5"
+                    :cards="cards"
+                    :selected-node="selectedNode"
+                    :selected-chance="selectedChance"
+                    :current-board="currentBoard"
+                    :total-bet-amount="totalBetAmount"
+                    :results="results"
+                    :display-opts="displayOpts"
+                    display-player="ip"
+                    :is-compare-mode="true"
+                />                
+            </template>
+
+            <template v-else-if="displayMode === 'chance' && selectedChance">
+                <ResultsChance
+                    :selected-node="selectedNode"
+                    :selected-chance="selectedChance"
+                    :chance-report="chanceReports"
+                    :display-opts="displayOpts"
+                    :display-player="displayPlayerBasics"
+                    @deal-card="onDealCard"
+                />
+            </template>
         </div>
     </div>
-
 </template>

@@ -1,20 +1,19 @@
-
 <script setup lang="ts">
     import { computed, reactive, ref, toRefs, watch } from 'vue';
     import { ActionNode, ChanceReport, HoverContent, Results, TableMode, contentGraphsList, PlayerNode } from '../typing';
-    import { cardPairOrder, idxToCard, toFixedAdaptive, toFixed1, toFixed, cardText } from '../util';
+    import { cardPairOrder, toFixedAdaptive, toFixed1, toFixed, cardText } from '../util';
     import { save } from "@tauri-apps/api/dialog";
     import { writeTextFile } from "@tauri-apps/api/fs";
 
     const barWidthListBasics = ["normalised", "absolute", "full"] as const;
     const contentListBasics = ["percentage", "ev"] as const;
-    type ResultsOptionsBasics = {
+    type DisplayOptsBasics = {
         barWidth: (typeof barWidthListBasics)[number];
         content: (typeof contentListBasics)[number];
     };
 
-    const barWidthListChance = ["normalized", "full"] as const;
-    type ResultsOptionsChance = {
+    const barWidthListChance = ["normalised", "full"] as const;
+    type DisplayOptsChance = {
         barWidth: (typeof barWidthListChance)[number];
     };
 
@@ -127,13 +126,13 @@
         scrollTarget: null,
     });
 
-    const resultsOpts = props.tableMode !== "chance" ?
-        reactive<ResultsOptionsBasics>({
+    const displayOpts = props.tableMode !== "chance" ?
+        reactive<DisplayOptsBasics>({
             barWidth: "normalised",
             content: "percentage",
         }) : 
-        reactive<ResultsOptionsChance>({
-            barWidth: "normalized",
+        reactive<DisplayOptsChance>({
+            barWidth: "normalised",
         });
     
     const optionsStorageKey = `display-options-table-${props.tableMode}`;
@@ -141,8 +140,8 @@
 
     if (savedDisplayOptions) {
         if (props.tableMode !== "chance") {
-            const saved = JSON.parse(savedDisplayOptions) as ResultsOptionsBasics;
-            const options = resultsOpts as ResultsOptionsBasics;
+            const saved = JSON.parse(savedDisplayOptions) as DisplayOptsBasics;
+            const options = displayOpts as DisplayOptsBasics;
             if (barWidthListBasics.includes(saved.barWidth)) {
                 options.barWidth = saved.barWidth;
             }
@@ -150,8 +149,8 @@
                 options.content = saved.content;
             }
         } else {
-            const saved = JSON.parse(savedDisplayOptions) as ResultsOptionsChance;
-            const options = resultsOpts as ResultsOptionsChance;
+            const saved = JSON.parse(savedDisplayOptions) as DisplayOptsChance;
+            const options = displayOpts as DisplayOptsChance;
             if (barWidthListChance.includes(saved.barWidth)) {
                 options.barWidth = saved.barWidth;
             }
@@ -159,7 +158,7 @@
     }
 
     const updateDisplayOptions = () => {
-        localStorage.setItem(optionsStorageKey, JSON.stringify(resultsOpts));
+        localStorage.setItem(optionsStorageKey, JSON.stringify(displayOpts));
     };
 
     const tableDiv = ref<HTMLDivElement | null>(null);
@@ -223,7 +222,7 @@
     watch([selectedNode, displayPlayer], resetSortKey);
 
     if (props.tableMode !== "chance") {
-        watch(() => (resultsOpts as ResultsOptionsBasics).content, resetSortKey);
+        watch(() => (displayOpts as DisplayOptsBasics).content, resetSortKey);
     }
 
     if (props.tableMode === "graphs") {
@@ -286,7 +285,7 @@
             ret.push({ label: "EV", type: "ev" });
             ret.push({ label: "EQR", type: "percentage", index: INDEX_EQR });
 
-            const options = resultsOpts as ResultsOptionsBasics;
+            const options = displayOpts as DisplayOptsBasics;
 
             if (numActions.value > 0) {
                 const spot = props.selectedNode as PlayerNode;
@@ -573,9 +572,9 @@
         const weight = row[INDEX_WEIGHT];
         if (weight === 0) {
             return "0% 100%";
-        } else if (resultsOpts.barWidth === "normalized") {
+        } else if (displayOpts.barWidth === "normalised") {
             return `${(weight / maxWeight.value) * 100}% 100%`;
-        } else if (resultsOpts.barWidth === "absolute") {
+        } else if (displayOpts.barWidth === "absolute") {
             return `${weight * 100}% 100%`;
         } else {
             return "100% 100%";
@@ -674,21 +673,24 @@
 </script>
 
 <template>
-    <div class="flex flex-col w-full border-l border-gray-500 overflow-x-auto">
-        <div class="flex shrink-0 h-12 border-b border-gray-500">
-            <div class="flex h-full px-4 items-center text-lg font-semibold">
+    <div class="flex flex-col w-full overflow-x-auto">
+        <div class="flex shrink-0 h-fit p-2 bg-base-200">
+            <div class="flex h-full px-4 items-center text-lg font-semibold bg-base-200">
                 Summary
             </div>
 
-            <div class="flex h-full ml-auto pr-4 items-center gap-4 snug">
-                <div class="flex flex-col items-start justify-center h-full">
-                    <div class="text-sm">Bar width:</div>
+            <div class="flex h-full ml-auto pr-4 items-center gap-4 snug bg-base-200">
+
+                <div class="form-control">
+                    <label class="label p-0">
+                        <span class="label-text">Bar Width:</span>
+                    </label>
                     <select
-                        v-model="resultsOpts.barWidth"
-                        class="w-28 px-1 py-0.5 border-gray-600 bg-gray-200 rounded-lg shadow cursor-pointer bg-right"
+                        v-model="displayOpts.barWidth"
                         @change="updateDisplayOptions"
+                        class="select select-bordered select-sm select-primary"
                     >
-                        <option value="normalized">Normalized</option>
+                        <option value="normalised">Normalised</option>
                         <option v-if="tableMode !== 'chance'" value="absolute">
                             Absolute
                         </option>
@@ -696,32 +698,19 @@
                     </select>
                 </div>
 
-                <div
-                    v-if="tableMode !== 'chance'"
-                    class="flex flex-col items-start justify-center h-full"
-                >
-                    <div class="text-sm">Display:</div>
+                <div v-if="tableMode !== 'chance'" class="form-control">
+                    <label class="label p-0">
+                        <span class="label-text">Display:</span>
+                    </label>
                     <select
-                        v-model="(resultsOpts as ResultsOptionsBasics).content"
-                        class="w-28 px-1 py-0.5 border-gray-600 bg-gray-200 rounded-lg shadow cursor-pointer bg-right"
+                        class="select select-bordered select-sm select-primary"
+                        v-model="(displayOpts as DisplayOptsBasics).content"
                         @change="updateDisplayOptions"
                     >
                         <option value="percentage">Action %</option>
-                        <option value="ev">Action EV</option>
+                        <option value="ev">Action EV</option>    
                     </select>
                 </div>
-
-                <Tippy content="Export summary to CSV file">
-                    <button
-                        :class="
-                            'flex w-8 h-8 items-center justify-center border border-gray-600 bg-gray-200 ' +
-                            'rounded-lg shadow transition-colors active:bg-gray-300'
-                        "
-                        @click="exportSummary"
-                    >
-                        <ArrowTopRightOnSquareIcon class="w-5 h-5" />
-                    </button>
-                </Tippy>
             </div>
         </div>
 
@@ -731,7 +720,7 @@
             @scroll.passive="onTableScroll"
         >
             <table class="w-full h-full text-sm text-center align-middle">
-                <thead class="sticky top-0 z-30 bg-gray-100 shadow">
+                <thead class="sticky top-0 z-30 bg-base-200 shadow">
                     <tr style="height: calc(1.9rem + 1px)">
                         <th
                             v-for="column in columns"
@@ -740,7 +729,7 @@
                             :class="
                                 'whitespace-nowrap select-none ' +
                                 (column.type === 'card'
-                                    ? 'sticky left-0 z-40 bg-gray-100 '
+                                    ? 'sticky left-0 z-40 bg-base-200 '
                                     : '') +
                                 (column.type !== 'bar' ? 'cursor-pointer ' : '') +
                                 (tableMode === 'chance' ? 'header-divider' : '')
@@ -773,7 +762,7 @@
                             :class="
                                 'header-divider ' +
                                 (column.type === 'card'
-                                    ? 'sticky left-0 z-40 underline bg-gray-100 '
+                                    ? 'sticky left-0 z-40 underline bg-base-200 '
                                     : 'relative ') +
                                 (column.type === 'bar'
                                     ? 'pt-[0.3125rem] pb-1 px-1'
@@ -887,7 +876,7 @@
                         :key="item[0]"
                         :class="
                             'relative ' +
-                            (item[0] === scrollTarget ? 'bg-yellow-200' : 'bg-gray-50')
+                            (item[0] === scrollTarget ? 'bg-base-300' : 'bg-base')
                         "
                         style="height: calc(1.9rem + 1px)"
                     >
@@ -899,8 +888,8 @@
                                 (column.type === 'card'
                                     ? 'sticky left-0 z-10 ' +
                                         (item[0] === scrollTarget
-                                            ? 'bg-yellow-200 '
-                                            : 'bg-gray-50 ')
+                                            ? 'bg-base-300 '
+                                            : 'bg-base-100 ')
                                     : 'relative ') +
                                 (column.type === 'bar' ? 'pt-[0.3125rem] pb-1 px-1' : 'pt-0.5')
                             "
@@ -912,7 +901,7 @@
                                 <span
                                     v-for="card in pairText(item[columnIndex(column)])"
                                     :key="card.rank + card.suit"
-                                    :class="card.colorClass"
+                                    :class="(item[0] === scrollTarget ? 'bg-base-300' : '')"
                                 >
                                     {{ card.rank + card.suit }}
                                 </span>

@@ -43,7 +43,7 @@ impl Range {
                         hands[idx] = elems[(12 - i) * 13 + (12 - j)];
                     }
                 
-                } else if i < j {
+                } else if i > j {
                     let rank_1 = Rank::from(i as u8);
                     let rank_2 = Rank::from(j as u8);
                     for idx in suited_idxs(rank_1, rank_2) {

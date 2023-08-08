@@ -2,7 +2,7 @@
 <script setup lang="ts">
     import { computed, ref, toRefs, watch } from 'vue';
     import { ActionNode, ChanceNode, ChanceReport, PlayerNode, Results, RootNode } from '../typing';
-    import { average, rgbToString, idxToCard } from '../util';
+    import { average, rgbToString, cardText } from '../util';
     import { useConfigStore } from '../store';
     import * as rust from '../rust_funcs';
 
@@ -36,13 +36,6 @@
     const selectedChanceIdx = ref(-1);
     const isDealing = ref(false);
     const canChanceReport = ref(false);
-
-    let selectedNodeIdxTemp = -1;
-    let selectedChanceIdxTemp = -1;
-    let results: Results | null = null;
-    let chanceReport: ChanceReport | null = null;
-    let totalBetAmount: number[] = [0, 0];
-    let totalBetAmountAppended = [0, 0];
 
     const selectedNode = computed(() => 
         selectedNodeIdx.value === -1 || selectedNodeIdx.value >= nodes.value.length
@@ -80,6 +73,13 @@
         return board;
     });
 
+    let selectedNodeIdxTemp = -1;
+    let selectedChanceIdxTemp = -1;
+    let results: Results | null = null;
+    let chanceReport: ChanceReport | null = null;
+    let totalBetAmount: number[] = [0, 0];
+    let totalBetAmountAppended = [0, 0];
+
     watch(handlerUpdated, async () => {
 
         if (!handlerUpdated.value) return;
@@ -99,11 +99,7 @@
         emit("update:is-handler-updated", false);
     });
 
-    const selectNode = async (
-        nodeIdx: number,
-        splice: boolean,
-        fromDeal = false,
-    ) => {
+    const selectNode = async (nodeIdx: number, splice: boolean, fromDeal = false) => {
 
         if (props.locked || 
         (!splice && ((nodeIdx === selectedNodeIdx.value && !fromDeal) ||
@@ -119,6 +115,7 @@
 
         emit("update:is-locked", true);
 
+        // Avoid updating refs until the end for a re-render.
         selectedNodeIdxTemp = selectedNodeIdx.value;
         selectedChanceIdxTemp = selectedChanceIdx.value;
 
@@ -135,7 +132,6 @@
             selectedChanceIdxTemp = -1;
 
             if (riverNode) {
-                
                 const history = nodes.value.slice(1, riverIdx).map((node) => node.selectedIdx);
                 await rust.applyHistoryGame(history);
                 const possibleCards = await rust.possibleCardsGame();
@@ -160,7 +156,6 @@
                 lastNode.equityOOP !== 0 &&
                 lastNode.equityOOP !== 1
             ) {
-                
                 const history = nodes.value.slice(1, -1).map((node) => node.selectedIdx);
                 await rust.applyHistoryGame(history);
                 const results = await rust.resultsGame();
@@ -178,7 +173,6 @@
             if (selectedNodeIdxTemp < nodeIdx + 1) {
                 selectedNodeIdxTemp = nodeIdx + 1;
             }
-        
         } else {
             selectedNodeIdxTemp = nodeIdx;
             if (nodeIdx <= selectedChanceIdxTemp) {
@@ -478,11 +472,11 @@
 
     const nodeCards = (node: RootNode | ChanceNode) => {
         if (node.type === "root") {
-            return node.board.map((card) => idxToCard(card));
+            return node.board.map((card) => cardText(card));
         } else if (node.selectedIdx === -1) {
             return [{ rank: "?", suit: "", colorClass: "text-black"}]
         } else {
-            return [idxToCard(node.selectedIdx)];
+            return [cardText(node.selectedIdx)];
         }
     };
 
@@ -539,11 +533,27 @@
 </script>
 
 <template>
-    <div ref="navDiv" class="flex shrink-0 h-44 gap-1 p-1 overflow-x-auto whitespace-nowrap">
+    <div ref="navDiv" class="flex shrink-0 h-48 gap-1 p-1 overflow-x-auto whitespace-nowrap">
         <div
             v-for="node in nodes"
             :key="node.idx"
-            class="flex flex-col relative h-full p-1 justify-start rounded-lg shadow-md border-2 "
+            :class="'flex flex-col relative h-full p-2 justify-start rounded-lg border-2 hover:border-primary-focus ' +
+            (
+                node.type === 'chance'
+                    ? isSelectedChanceSkipped && node.idx > selectedChanceIdx
+                        ? ''
+                        : 'hover:border-secondary-focus '
+                    : 'hover:border-neutral-focus '
+            ) + (
+                node.idx == selectedChanceIdx
+                    ? 'border-secondary cursor-default'
+                    : node.idx === selectedNodeIdx
+                    ? 'border-primary cursor-default'
+                    : node.type === 'chance' && isSelectedChanceSkipped && node.idx > selectedChanceIdx
+                    ? 'border-neutral cursor-default'
+                    : 'border-neutral cursor-pointer'
+            )
+            "
             @click="selectNode(node.idx, false)"    
         >
             <!-- Root or Chance -->
@@ -551,13 +561,14 @@
                 <div class="p-1 font-semibold">
                     {{ node.player.toUpperCase() }}
                 </div>
-                <div class="flex flex-col flex-grow px-3 items-center justify-evenly font-semibold">
+                <div class="flex flex-col flex-grow px-3 items-center justify-evenly font-semibold border-secondary">
                     <div class="relative">
                         <span 
                             v-for="card of nodeCards(node)"
-                            :key="card.toString()"
+                            :key="card.rank + card.suit"
+                            :class="(node.type === 'root' ? 'mx-px ' : 'inline-block w-8 text-center ')"
                         >
-                            {{ card.toString() }}
+                            {{ card.rank + card.suit }}
                         </span>
                         <template v-if="node.type === 'chance' && node.selectedIdx !== -1">
 
@@ -611,7 +622,7 @@
                         node.selectedIdx !== -1 && 
                         !isDealing
                     "
-                    class="absolute top-1.5 right-1.5 "
+                    class="absolute top-1.5 right-1.5 hover:bg-base-200 rounded-full"
                     @click="deal(node.selectedIdx)"
                 >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
@@ -629,13 +640,14 @@
                     <button
                         v-for="action of node.actions"
                         :key="action.idx"
-                        class="flex w-full px-1.5 rounded-md"
+                        :class="'flex w-full px-1.5 rounded-md hover:bg-base-200 ' + (action.selected ? ' bg-base-200' : '')"
                         @click.stop="play(node.idx, action.idx)"    
                     >
-                        <span class="inline-block relative w-4 mr-0.5">
+                        <span class="inline-block relative w-4 mr-0.5 mt-1">
                             <span 
                                 v-if="node.idx === selectedNodeIdx && !(selectedChanceIdx !== -1 && !canChanceReport)"
-                                class="absolute top-[0.3125rem] left-0 w-3 h-3 rounded-sm"
+                                class="absolute top-[0.125rem] left-0 w-3 h-3 rounded-sm"
+                                :style = "{ backgroundColor: action.colour }"
                             ></span>
                             <span v-if="action.selected">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-4 h-4">

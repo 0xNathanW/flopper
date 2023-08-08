@@ -12,8 +12,12 @@
     let dragStatus: DragStatus = "none";
 
     const handleMouseDown = (i: number, j: number) => {
-        config.setWeight(cellIdx(i, j), weight.value, props.oop);
-        dragStatus = "enabled";
+        if (getWeight(i, j) !== weight.value) {
+            config.setWeight(cellIdx(i, j), weight.value, props.oop);
+            dragStatus = "enabled";
+        } else {
+            config.setWeight(cellIdx(i, j), 0, props.oop);
+        }
     };
 
     const handleMouseOver = (i: number, j: number) => {
@@ -27,11 +31,13 @@
     });
 
     let weight = ref(100);
+    let pfr = ref(0);
+    let vpip = ref(0);
 
     // eg. AA, AKo, AKs etc.
     const cellText = (i: number, j: number): string => {
-        const rank1 = RANKS[i - 1];
-        const rank2 = RANKS[j - 1];
+        const rank1 = RANKS[(14 - i) - 1];
+        const rank2 = RANKS[(14 - j) - 1];
         if (i == j) {
             return rank1 + rank2;
         } else if (i < j) {
@@ -46,9 +52,13 @@
         return (i - 1) * 13 + (j - 1);
     };
 
-    // Get corresponding weight from range array.
+    // Get cell weight from range array.
     const getWeight = (i: number, j: number): number => {
         return props.oop ? config.oopRange[cellIdx(i, j)] : config.ipRange[cellIdx(i, j)];
+    };
+
+    const hasWeight = (row: number, col: number) => {
+        return getWeight(row, col) > 0;
     };
 
     // String of weight to display in bottom right of cell if not 0 or 100.
@@ -100,20 +110,38 @@
 </script>
 
 <template>
+    
+    <!-- range grid header -->
+    <div class="flex flex-row w-full items-center gap-5 mb-5">
+        
+        <h2 class="font-bold text-2xl">{{ props.oop ? "OOP" : "IP" }} Range: </h2>
+        
+        <input
+            class="input input-primary input-bordered flex-grow"
+            type="text"
+        />
+
+        <div class="w-20">
+            <p>Combos: 0</p>
+            <p>0%</p>            
+        </div>
+
+        <button
+            class="btn btn-primary"
+            @click.prevent="config.clearRange(props.oop)"
+        >
+            Clear
+        </button>
+        
+        <button className="btn btn-square">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+        </button>
+    
+    </div>
+
     <div class="flex flex-row items-start justify-center gap-5">
-        <div class="flex flex-col items-start w-[625px] min-w-[625px]">
+        <div class="flex flex-col items-start w-[625px] gap-5">
             
-            <!-- range grid header -->
-            <div class="flex flex-row mb-3 w-full justify-between items-center">
-                <h2 class="font-bold text-3xl">{{ props.oop ? "OOP" : "IP" }} Range</h2>
-                <button
-                    class="btn btn-primary"
-                    id="btn-clear"
-                    @click="config.clearRange(props.oop)"
-                >
-                Clear
-                </button>
-            </div>
 
             <!-- range grid -->
             <table class="table-fixed select-none">
@@ -121,24 +149,30 @@
                     <td 
                         v-for="col in 13" 
                         :key="col" 
-                        class="relative border-2 border-accent w-12"
+                        class="relative border-2 border-neutral w-12"
                         @mousedown="handleMouseDown(row, col)"
                         @mouseover="handleMouseOver(row, col)"
                         >
 
                         <div class="absolute top-0 left-0 w-full h-full">
                             <div
-                                class="absolute w-full h-full left-0 top-0 bg-bottom bg-no-repeat bg-base-200"
+                                class="absolute w-full h-full left-0 top-0 bg-bottom bg-no-repeat bg-base"
                                 :style="{
-                                    'background-image': `linear-gradient(hsl(var(--pf)) 0% 100%)`,
+                                    'background-image': `linear-gradient(hsl(var(--p)) 0% 100%)`,
                                     'background-size': `100% ${getWeight(row, col)}%`,
                                 }"
                             ></div>
                         </div>
 
-                        <div class="absolute top-0 left-0.5">{{ cellText(row, col) }}</div>
+                        <div 
+                            :class="'absolute top-0 left-0.5 '
+                            + (hasWeight(row, col) ? 'text-primary-content' : 'text-content')
+                            "
+                        >
+                            {{ cellText(row, col) }}
+                        </div>
                         <div
-                            class="absolute bottom-0 right-0.5"
+                            class="absolute bottom-0 right-0.5 text-primary-content"
                         >
                             {{ weightText(row, col)  }}
                         </div>
@@ -146,7 +180,7 @@
                 </tr>
             </table>
 
-            <div class="flex flex-row mt-4 w-full items-center gap-5">
+            <div class="flex flex-row w-full items-center gap-3">
                 <p>Weight: </p>
                 <input
                     v-model.number="weight"
@@ -166,10 +200,32 @@
                 />
                 <p>%</p>
             </div>
+
+            <div class="flex flex-row gap-2">
+                <p>PFR (Exclude): </p>
+                <input
+                class="input input-primary input-bordered input-sm"
+                type="number"
+                min="0"
+                max="100"
+                step="1"
+                />
+                <p>%</p>
+                <p class="ml-10">VPIP (Include): </p>
+                <input
+                    class="input input-primary input-bordered input-sm"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                />
+                <p>%</p>
+            </div>
+                
         </div>
 
         <div class="w-fit">
-            <ul class="menu menu-sm bg-base-200 rounded-lg w-[300px] h-[625px] overflow-y-auto mt-16">
+            <ul class="menu menu-sm bg-base-200 rounded-lg w-[300px] h-[625px] overflow-y-auto border-2 border-accent">
                 <li>
                     <details>
                         <summary>

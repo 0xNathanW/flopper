@@ -1,38 +1,37 @@
 
 <script setup lang="ts">
-
     import { reactive, ref, toRefs, watch } from "vue";
-    import { ResultsPanel, ResultsOpts } from "../typing";
+    import { DisplayMode, DisplayOpts } from "../typing";
+    import * as Type from "../typing";
 
     const props = defineProps<{
-        resultsPanel: string;
+        displayMode: DisplayMode;
         chanceMode: string;
         autoPlayerBasics: "oop" | "ip";
         autoPlayerChance: "oop" | "ip";
     }>();
 
     const emit = defineEmits<{
-        (event: "update:resultsPanel", resultsPanel: ResultsPanel): void;
-        (event: "update:resultsOpts", resultsOpts: ResultsOpts): void;
+        (event: "update:display-mode", displayMode: DisplayMode): void;
+        (event: "update:display-opts", displayOpts: DisplayOpts): void;
     }>();
 
     const { chanceMode } = toRefs(props);
-    let oldResultsPanel = "basics" as ResultsPanel;
+    let oldDisplayMode = "basics" as DisplayMode;
 
     watch(chanceMode, (newVal, oldVal) => {
         if (newVal && !oldVal) {
-            oldResultsPanel = props.resultsPanel;
-            emit("update:resultsPanel", "chance");
+            oldDisplayMode = props.displayMode;
+            emit("update:display-mode", "chance");
         } else if (!newVal && oldVal) {
-            emit("update:resultsPanel", oldResultsPanel);
+            emit("update:display-mode", oldDisplayMode);
         }
     });
 
-    const resultsOpts = reactive<ResultsOpts>({
+    const displayOpts = reactive<DisplayOpts>({
         playerBasics: "auto",
         playerChance: "auto",
         barHeight: "normalised",
-        suit: "grouped",
         strategy: "show",
         contentBasics: "default",
         contentGraphs: "eq",
@@ -40,55 +39,85 @@
     });
 
     const strategyContentPair = ref("show,default");
+    const savedDisplayOpts = localStorage.getItem("display-opts");
 
-    const updateResultsPanel = (resultsPanel: ResultsPanel) => {
-        if (resultsPanel !== "chance") {
-            oldResultsPanel = resultsPanel;
+    if (savedDisplayOpts) {
+        const saved: DisplayOpts = JSON.parse(savedDisplayOpts);
+
+        if (Type.barHeightList.includes(saved?.barHeight)) {
+            displayOpts.barHeight = saved.barHeight;
         }
-        emit("update:resultsPanel", resultsPanel);
+        if (Type.strategyList.includes(saved?.strategy)) {
+            displayOpts.strategy = saved.strategy;
+        }
+        if (Type.contentBasicsList.includes(saved?.contentBasics)) {
+            displayOpts.contentBasics = saved.contentBasics;
+        }
+        if (Type.contentGraphsList.includes(saved?.contentGraphs)) {
+            displayOpts.contentGraphs = saved.contentGraphs;
+        }
+        if (Type.chartChanceList.includes(saved?.chartChance)) {
+            displayOpts.chartChance = saved.chartChance;
+        }
+
+        strategyContentPair.value = [
+            displayOpts.strategy,
+            displayOpts.contentBasics,
+        ].join(",");
+        
+        emit("update:display-opts", displayOpts);
+    }
+
+    const updateDisplayMode = (displayMode: DisplayMode) => {
+        if (displayMode !== "chance") {
+            oldDisplayMode = displayMode;
+        }
+        emit("update:display-mode", displayMode);
     };
 
-    const updateResultsOpts = () => {
-        const opts = resultsOpts;
+    const updateDisplayOpts = () => {
+        const opts = displayOpts;
         const [strat, content] = strategyContentPair.value.split(",");
-        opts.strategy = strat as ResultsOpts["strategy"];
-        opts.contentBasics = content as ResultsOpts["contentBasics"];
-        emit("update:resultsOpts", opts);
+        opts.strategy = strat as DisplayOpts["strategy"];
+        opts.contentBasics = content as DisplayOpts["contentBasics"];
+        localStorage.setItem("display-opts", JSON.stringify(opts));
+        emit("update:display-opts", opts);
     };
 
 </script>
 
 <template>
-    <div class="flex shrink-0 h-12 border-y">
+    <div class="flex shrink-0 py-2.5 px-2 items-center">
 
-        <button
-            v-for="m in (['basics', 'graphs', 'compare'] as const)"
-            :key="m"
-            class="flex w-[10%] h-full items-center justify-center font-semibold text-lg"
-            @click="updateResultsPanel(m)"
-        >
-            {{ m }}
-        </button>
+        <div class="join">
+            <button
+                v-for="m in ['basics', 'graphs', 'compare'] as const"
+                :key="m"
+                :class="'btn join-item ' + (displayMode === m ? 'btn-primary' : '')" 
+                @click="updateDisplayMode(m)"
+            >
+                {{ m }}
+            </button>
 
-        <button
-            class="flex w-[10%] h-full items-center justify-center font-semibold text-lg"
-            :disabled="chanceMode === ''"    
-            @click="updateResultsPanel('chance')"
-        >
-            chanceMode
-        </button>
+            <button
+                :class="'btn join-item ' + (displayMode === 'chance' ? 'btn-primary' : '')" 
+                v-show="chanceMode !== ''"
+                @click="updateDisplayMode('chance')"
+            >
+                {{ chanceMode }}
+            </button>
+        </div>
 
         <div class="flex ml-auto shrink-0 h-full px-4 items-center justify-start gap-2 snug">
 
-            <div 
-                v-if="['basics', 'graphs'].includes(resultsPanel)" 
-                class="flex flex-col items-start justify-center h-full"
-            >
-                <div class="text-sm">Player: </div>
-                <select
-                    v-model="resultsOpts.playerBasics"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+            <div v-if="['basics', 'graphs'].includes(displayMode)" class="form-control">
+                <label class="label p-0">
+                    <span class="label-text">Player:</span>
+                </label>
+                <select 
+                    class="select select-sm select-bordered select-primary"
+                    v-model="displayOpts.playerBasics"
+                    @change="updateDisplayOpts"    
                 >
                     <option value="auto">
                         Auto {{ autoPlayerBasics.toUpperCase() }}
@@ -98,15 +127,14 @@
                 </select>
             </div>
 
-            <div
-                v-if="resultsPanel === 'chance'"
-                class="flex flex-col items-start justify-center h-full"
-            >
-                <div class="text-sm">Player: </div>
+            <div v-if="displayMode === 'chance'" class="form-control">
+                <label class="label p-0">
+                    <span class="label-text">Player:</span>
+                </label>
                 <select
-                    v-model="resultsOpts.playerChance"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+                    class="select select-sm select-bordered select-primary"
+                    v-model="displayOpts.playerChance"
+                    @change="updateDisplayOpts"
                 >
                     <option value="auto">
                         Auto {{ autoPlayerChance.toUpperCase() }}
@@ -117,14 +145,16 @@
             </div>
 
             <div
-                v-if="['basics', 'compare'].includes(resultsPanel)"
-                class="flex flex-col items-start justify-center h-full"
+                v-if="['basics', 'compare'].includes(displayMode)"
+                class="form-control"
             >
-                <div class="text-sm">Bar height: </div>
+                <label class="label p-0">
+                    <span class="label-text">Bar Height:</span>
+                </label>
                 <select
-                    v-model="resultsOpts.barHeight"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+                    class="select select-sm select-bordered select-primary"
+                    v-model="displayOpts.barHeight"
+                    @change="updateDisplayOpts"
                 >
                     <option value="normalised">Normalised</option>
                     <option value="absolute">Absolute</option>
@@ -133,29 +163,16 @@
             </div>
 
             <div
-                v-if="['basics', 'compare'].includes(resultsPanel)"
-                class="flex flex-col items-start justify-center h-full"
+                v-if="['basics', 'compare'].includes(displayMode)"
+                class="form-control"
             >
-                <div class="text-sm">Suit: </div>
+                <div class="label p-0 text-sm">
+                    <span>Display:</span>
+                </div>
                 <select
-                    v-model="resultsOpts.suit"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
-                >
-                    <option value="grouped">Grouped</option>
-                    <option value="separate">Separate</option>
-                </select>
-            </div>
-
-            <div
-                v-if="['basics', 'compare'].includes(resultsPanel)"
-                class="flex flex-col items-start justify-center h-full"
-            >
-                <div class="text-sm">Display: </div>
-                <select
+                    class="select select-sm select-bordered select-primary"
                     v-model="strategyContentPair"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+                    @change="updateDisplayOpts"
                 >
                     <option value="show,default">Strategy</option>
                     <option value="show,eq">Strategy + EQ</option>
@@ -169,14 +186,16 @@
             </div>
 
             <div
-                v-if="resultsPanel === 'graphs'"
-                class="flex flex-col items-start justify-center h-full"
+                v-if="displayMode === 'graphs'"
+                class="form-control"
             >
-                <div class="text-sm">Display: </div>
+                <div class="label p-0">
+                    <span class="text-sm">Display:</span>
+                </div>
                 <select
-                    v-model="resultsOpts.contentGraphs"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+                    class="select select-sm select-bordered select-primary"
+                    v-model="displayOpts.contentGraphs"
+                    @change="updateDisplayOpts"
                 >
                     <option value="eq">EQ</option>
                     <option value="ev">EV</option>
@@ -185,14 +204,16 @@
             </div>
 
             <div
-                v-if="resultsPanel === 'chance'"
-                class="flex flex-col items-start justify-center h-full"
+                v-if="displayMode === 'chance'"
+                class="form-control"
             >
-                <div class="text-sm">Chart: </div>
+                <div class="label p-0">
+                    <span>Chart:</span>
+                </div>
                 <select
-                    v-model="resultsOpts.chartChance"
-                    class="w-28 px-1 py-0.5 rounded-lg cursor-pointer"
-                    @chance="updateResultsOpts"
+                    class="select select-sm select-bordered select-primary"
+                    v-model="displayOpts.chartChance"
+                    @change="updateDisplayOpts"
                 >
                     <option value="strategy-combos">Strategy combos</option>
                     <option value="strategy">Strategy</option>

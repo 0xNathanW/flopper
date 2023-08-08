@@ -32,7 +32,7 @@
         config.betSizes[1][2][0],
         config.betSizes[1][2][1],
     ));
-    
+
     const rootNode: RootNode = {
         type: "root",
         idx: 0,
@@ -306,7 +306,7 @@
                 'flex flex-col h-full p-1 justify-start border-2 rounded-md border-neutral '
                 + (node.type === 'chance' || node.type === 'root' ? 'border-secondary' : 'border-neutral')
             "
-            @click="selectNode(node.idx, false, false, true)"
+            @click.prevent="selectNode(node.idx, false, false, true)"
         >
 
             <!-- Root/Chance -->
@@ -331,9 +331,9 @@
                     <button
                         v-for="action in node.actions"
                         :key="action.idx"
-                        :class="'items-center flex w-full px-1 rounded-md transition-colors hover:bg-base-100' +
+                        :class="'items-center flex w-full px-1 rounded-md transition-colors hover:bg-base-200' +
                             (action.selected ? ' bg-base-200' : '')"
-                        @click.stop="play(node.idx, action.idx)"
+                        @click.stop.prevent="play(node.idx, action.idx)"
                     >
                         <span class="inline-block relative w-4 mr-0.5">
                             <span v-if="action.selected">

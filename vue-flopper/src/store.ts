@@ -31,27 +31,57 @@ export const useConfigStore = defineStore("config", {
             return verifyBetTxt(s.betSizes[player - 1][street - 1][r], raise);
         },
 
-        configInvalid: (s) => {
+        isInvalid: (s) => {
+
             // Check if either range is empty.
-            if (s.oopRange.every((w) => w === 0) || s.ipRange.every((w) => w === 0)) {
-                return true;
+            if (s.oopRange.every((w) => w === 0)) {
+                return "OOP range is empty.";
+            }
+
+            if (s.ipRange.every((w) => w === 0)) {
+                return "IP range is empty.";
             }
 
             // Check we have at least 3 board cards.
             if (s.board.length < 3) {
-                return true;
+                return "Board must have at least 3 cards.";
             }
 
             for (let street = 1; street <= 3; street++) {
                 for (let player = 1; player <= 2; player++) {
                     for (let raise = 0; raise <= 1; raise++) {
                         if (verifyBetTxt(s.betSizes[player - 1][street - 1][raise], raise === 1).validity !== 1) {
-                            return true;
+                            return `Invalid bet size on street ${street} for player ${player}.`;
                         }
                     }
                 }
             }
-            return false;
+
+            if (s.startingPot <= 0) {
+                return "Starting pot must be positive.";
+            }
+
+            if (s.effectiveStack <= 0) {
+                return "Effective stack must be positive.";
+            }
+
+            if (s.rake < 0 || s.rake > 100) {
+                return "Rake must be between 0% and 100%.";
+            }
+
+            if (s.rakeCap < 0) {
+                return "Rake cap must be positive.";
+            }
+
+            if (s.addAllInThreshold < 0) {
+                return "Add all-in threshold must be positive.";
+            }
+
+            if (s.forceAllInThreshold < 0) {
+                return "Force all-in threshold must be positive.";
+            }
+
+            return "";
         },
 
         configHash: (s) => {
@@ -120,11 +150,23 @@ export const useConfigStore = defineStore("config", {
 
 export type MainPanel = "results" | "config" | "settings";
 export type ConfigPanel = "rangeOOP" | "rangeIP" | "treeConfig" | "board" | "run" | "preview";
+export type ConfigModal = "none" | "rangeOOP" | "rangeIP";
+
+const lightThemes = [
+    "light", "cupcake", "bumblebee", 
+    "emerald", "corporate", "retro", 
+    "cyberpunk", "valentine", "garden",
+    "lofi", "pastel", "fantasy", 
+    "wireframe", "cmyk", "autumn", 
+    "acid", "lemonade", "winter",
+]
 
 export const useStore = defineStore("app", {
     state: () => ({
+        theme: "dark",
         mainPanel: "config" as MainPanel,
         configPanel: "rangeOOP" as ConfigPanel,
+        configModal: "none" as ConfigModal,
         treeHash: 0,
         solverRunning: false,
         solverPaused: false,
@@ -141,5 +183,8 @@ export const useStore = defineStore("app", {
                 s.solverError
             );
         },
+        contrastText: (s) => {
+            return lightThemes.includes(s.theme) ? "black" : "white";
+        }
     },
 });

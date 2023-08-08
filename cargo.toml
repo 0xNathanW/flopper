@@ -3,6 +3,5 @@
 members = [
     "gto",
     "poker",
-    "flopper/src-tauri",
     "vue-flopper/src-tauri",
 ]
