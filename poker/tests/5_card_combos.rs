@@ -23,7 +23,7 @@ fn test_combo_5_senzee() {
                         hand[3] = cards[d];
                         hand[4] = cards[e];
                         
-                        let rank = rank_bit_mask_senzee(&hand);
+                        let rank = rank_bit_mask_senzee(&hand).unwrap();
                         rank_count
                             .entry(HandRank::rank_variant(rank))
                             .and_modify(|count| *count += 1)
@@ -50,7 +50,7 @@ fn test_combo_5_senzee() {
 #[test]
 fn test_combo_5_two_plus_two() {
     
-    let lookup_table = load_lookup_table().unwrap();
+    let lookup_table = load_lookup_table("./data/lookup_table.bin").unwrap();
     let cards = Deck::new();
     
     let mut rank_count: HashMap<HandRank, usize> = HashMap::new();
@@ -117,7 +117,7 @@ fn test_combo_5_naive() {
 
                         let rank = rank_cards_naive(&hand);
                         rank_count
-                            .entry(HandRank::rank_variant(rank))
+                            .entry(HandRank::rank_variant(rank.unwrap()))
                             .and_modify(|count| *count += 1)
                             .or_insert(1);
                     }

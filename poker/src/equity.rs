@@ -1,22 +1,6 @@
-use thiserror::Error;
-use crate::{deck::Deck, card::Card, range::Range, hand::Hand};
+use crate::{deck::Deck, card::Card, range::Range, hand::Hand, error::Result};
 
-mod enumerate;
-mod monte_carlo;
-
-pub use enumerate::equity_enumerate;
-
-#[derive(Debug, Error)]
-pub enum EquityError {    
-    #[error("Duplicate card: {0:?}")]
-    DuplicateCard(Card),
-
-    #[error("Invalid board size: {0}. Must be either 0, 3, 4 or 5.")]
-    InvalidBoardSize(usize),
-
-    #[error("Error loading lookup table: {0}")]
-    LookupTableError(#[from] std::io::Error),
-}
+pub use crate::enumerate::equity_enumerate;
 
 // Results of player i at index i.
 #[derive(Debug, Clone)]
@@ -62,7 +46,7 @@ impl EquityResults {
 }
 
 // Remove combos conflicting with board and dead cards.
-fn setup_cards(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck), EquityError> {
+pub fn setup_cards(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck)> {
     
     let mut deck = Deck::new();
     let mut removed = 0_u64;

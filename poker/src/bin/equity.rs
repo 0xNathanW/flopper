@@ -1,9 +1,8 @@
-use clap::Parser;
 use anyhow::{Result, Context};
+use clap::Parser;
 use prettytable::{Table, Row, Cell};
 use poker::{
-    range::Range, 
-    equity::{equity_enumerate, EquityResults}, board::Board,
+    board::Board, equity::{equity_enumerate, EquityResults}, evaluate::load_lookup_table, range::Range
 };
 
 #[derive(Debug, Parser)]
@@ -11,21 +10,29 @@ use poker::{
 #[command(about="Range vs Range equity calculator")]
 struct Args {
 
-    #[arg(help = "String represention of ranges to compare. Eg. '22-77, A2s+, KQs'")]
+    #[arg(help = "String represention of ranges to compare. Eg. '22-77' 'A2s+, KQs'")]
     ranges: Vec<String>,
 
     #[arg(short, long, help = "Board cards (0-5). Eg. '8d Tc 2h'")]
     board: Option<String>,
+
+    #[arg(short, long, help = "Path to lookup table")]
+    lookup_path: String,
 }
 
 fn main() -> Result<()> {
 
     let args = Args::parse();
-    
+    let lookup_path = args.lookup_path;
+    let lookup = load_lookup_table(&lookup_path)?;
+
     let mut ranges = Vec::new();
     for (i, r) in args.ranges.iter().enumerate() {
         let range = Range::from_str(r).with_context(|| format!("Failed to parse range number {}", i))?;
         ranges.push(range);
+    }
+    if ranges.len() < 2 {
+        return Err(anyhow::anyhow!("At least 2 ranges are required"));
     }
 
     let board = if let Some(b) = args.board {
@@ -34,7 +41,7 @@ fn main() -> Result<()> {
         Board::default()
     };
 
-    let results = equity_enumerate(ranges, board).context("Failed to calculate equity")?;
+    let results = equity_enumerate(ranges, board, &lookup).context("Failed to calculate equity")?;
     print_output(args.ranges, results);
 
     Ok(())

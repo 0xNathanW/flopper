@@ -1,26 +1,45 @@
+use std::{io::{self, Read}, path::Path};
 use crate::card::Card;
 use super::HandRank;
+use crate::error::{Error, Result};
 
-mod generate;
-mod eval;
+const TABLE_SIZE: usize = 32_487_834;
 
-pub use generate::{
-    generate_lookup_table,
-    save_lookup_table,
-    load_lookup_table,
-};
+pub fn load_lookup_table<P: AsRef<Path>>(path: P) -> Result<Vec<i32>> {
+    let mut buffer = vec![0_u8; TABLE_SIZE * 4];
+    
+    let mut file = std::fs::File::open(&path).map_err(|e| {
+        if e.kind() == io::ErrorKind::NotFound {
+            Error::LookupTableNotFound(path.as_ref().display().to_string())
+        } else {
+            Error::LookupTableError(e)
+        }
+    })?;
 
-pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> HandRank {
+    let n = file.read(&mut buffer)?;
+    if n != TABLE_SIZE * 4 {
+        return Err(Error::LookupTableError(io::Error::new(io::ErrorKind::UnexpectedEof, "wrong table size")));
+    }
+    
+    let lookup_table: Vec<i32> = unsafe {
+        let ptr = buffer.as_ptr() as *mut i32;
+        std::mem::forget(buffer);
+        Vec::from_raw_parts(ptr, TABLE_SIZE, TABLE_SIZE)
+    };
+    
+    Ok(lookup_table)
+}
+
+pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
-    // Convert the cards to their index in the lookup table.
     let rank = match hand.len() {
         5 => rank_hand_5(hand, lookup_table),
         6 => rank_hand_6(hand, lookup_table),
         7 => rank_hand_7(hand, lookup_table),
-        _ => unreachable!(),
+        _ => return Err(Error::InvalidHandSize(hand.len())),
     };
 
-    HandRank::from(rank)
+    Ok(HandRank::from(rank))
 }
 
 #[inline]

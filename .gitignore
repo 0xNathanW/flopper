@@ -94,3 +94,5 @@ test_data/
 
 # Built Visual Studio Code Extensions
 *.vsix
+
+/poker/data/*

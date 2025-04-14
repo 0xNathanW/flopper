@@ -1,7 +1,7 @@
-use crate::{hand::Hand, card::Card};
-use super::{tables::*, HandRank};
+use crate::{hand::Hand, card::Card, tables::*, error::{Error, Result}};
+use super::HandRank;
 
-pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> HandRank {
+pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> Result<HandRank> {
     assert!(board.len() >= 3 && board.len() <= 5);
 
     let mut cards = vec![Card::default(); 2 + board.len()];
@@ -12,24 +12,22 @@ pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> HandRank {
     rank_cards_senzee(&cards)
 }
 
-#[inline]
-pub fn rank_cards_senzee(hand: &[Card]) -> HandRank {
+pub fn rank_cards_senzee(hand: &[Card]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     let cards = hand.iter().map(|&c| c.bit_mask()).collect::<Vec<u32>>();
     rank_bit_mask_senzee(&cards)
 }
 
-#[inline]
-pub fn rank_bit_mask_senzee(hand: &[u32]) -> HandRank {
+pub fn rank_bit_mask_senzee(hand: &[u32]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     let rank_num = match hand.len() {
         5 => eval_5(hand),
         6 => eval_6(hand),
         7 => eval_7(hand),
-        _ => unreachable!(),
+        _ => return Err(Error::InvalidHandSize(hand.len())),
     };
 
-    HandRank::from(rank_num)
+    Ok(HandRank::from(rank_num))
 }
 
 fn find(u: usize) -> usize {

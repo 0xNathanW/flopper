@@ -9,9 +9,9 @@ regex = "1.7.1"
 thiserror = "1.0.39"
 rayon = "1.7.0"
 clap = { version = "4.2.4", features = ["derive"] }
-anyhow = "1.0.70"
 indicatif = "0.17.3"
 prettytable-rs = "0.10.0"
+anyhow = "1.0.98"
 
 [dev-dependencies]
 md-5 = "0.10.5"
@@ -19,5 +19,5 @@ hex-literal = "0.3.4"
 criterion = "0.4.0"
 
 [[bin]]
-name = "equity-calculator"
+name = "equity"
 path = "src/bin/equity.rs"

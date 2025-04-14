@@ -1,13 +1,15 @@
 mod naive;
 mod two_plus_two;
 mod senzee;
-mod tables;
 
 pub use naive::rank_cards_naive;
 pub use senzee::{
     rank_hand_senzee, 
     rank_cards_senzee, 
-    rank_bit_mask_senzee
+    rank_bit_mask_senzee,
+    eval_5,
+    eval_6,
+    eval_7,
 };
 pub use two_plus_two::{
     rank_hand_two_plus_two,
@@ -15,8 +17,6 @@ pub use two_plus_two::{
     rank_hand_6,
     rank_hand_7,
     load_lookup_table,
-    save_lookup_table,
-    generate_lookup_table,
 };
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Ord, Clone, Copy, Hash)]

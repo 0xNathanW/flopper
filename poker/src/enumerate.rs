@@ -1,30 +1,23 @@
 use std::vec;
 use rayon::prelude::*;
-use crate::board::Board;
-use crate::{card::Card, deck::Deck, hand::Hand, range::Range};
-use crate::evaluate::{rank_hand_7, load_lookup_table};
-use super::{
-    setup_cards, 
-    EquityError,
-    EquityResults
-};
+use crate::{board::Board, card::Card, deck::Deck, hand::Hand, range::Range, evaluate::rank_hand_7, equity::{setup_cards, EquityResults}, error::Result};
 
-pub fn equity_enumerate(ranges: Vec<Range>, board: Board) -> Result<EquityResults, EquityError> {
+pub fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {
 
     let board_cards = board.as_vec();
     let (ranges, deck) = setup_cards(ranges, &board_cards)?;
 
     if board.is_river_dealt() {
-        enumerate_river(ranges, &board_cards)
+        enumerate_river(ranges, &board_cards, lookup)
 
     } else if board.is_turn_dealt() {
-        enumerate_turn(ranges, &board_cards, deck)
+        enumerate_turn(ranges, &board_cards, deck, lookup)
     
     } else if board.is_flop_dealt() {
-        enumerate_flop(ranges, &board_cards, deck)
+        enumerate_flop(ranges, &board_cards, deck, lookup)
     
     } else {
-        enumerate_preflop(ranges, deck)
+        enumerate_preflop(ranges, deck, lookup)
     }
 }
 
@@ -104,9 +97,8 @@ fn enumerate_board(
     enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
 }
 
-fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck) -> Result<EquityResults, EquityError> {
+fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
-    let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
         let mut cards = [Card::default(); 7];
@@ -142,9 +134,8 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck) -> Result<Equity
     Ok(total)
 }
 
-fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> Result<EquityResults, EquityError> {
+fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
-    let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
         let mut cards = [Card::default(); 7];
@@ -172,9 +163,8 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> 
     Ok(total)
 }
 
-fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> Result<EquityResults, EquityError> {
+fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
-    let lookup = load_lookup_table()?;
     let results = (0..deck.len()).into_par_iter().map(|a| {
         
         let mut cards = [Card::default(); 7];
@@ -196,9 +186,8 @@ fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck) -> 
     Ok(total)
 }
 
-fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card]) -> Result<EquityResults, EquityError> {
+fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]) -> Result<EquityResults> {
 
-    let lookup = load_lookup_table()?;
     let mut results = EquityResults::new(ranges.len());
     let mut cards = [Card::default(); 7];
     cards[2] = board[0];
@@ -215,26 +204,27 @@ fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card]) -> Result<Equi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::equity::assert_results_eq;
-    use crate::range::Range;
+    use crate::{equity::assert_results_eq, range::Range, evaluate::load_lookup_table};
+    
+    const LOOKUP_PATH: &str = "./data/lookup_table.bin";
 
-    // Good.
     #[test]
     fn test_enumerate_river_heads_up() {
 
+        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
         let range_1 = Range::from_str("66+,A8s+,KTs+,QTs+,JTs,ATo+,KJo+").unwrap();
         let range_2 = Range::from_str("22-99,A2o-A8o").unwrap();
         let ranges = vec![range_1, range_2];
         let board = Board::from_str("Qh 4h 8c Qc 6s").unwrap();
 
-        let results = equity_enumerate(ranges, board).unwrap();
+        let results = equity_enumerate(ranges, board, &lookup).unwrap();
         assert_results_eq(&results, vec![56, 44]);
     }
 
-    // Ties are not working.
     #[test]
     fn test_enumerate_river_multi() {
         
+        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
         let range_1 = Range::from_str("A7s-A8s,K9s,JTs,ATo,KTo-KJo,QJo").unwrap();
         let range_2 = Range::from_str("66+,A8s+,KTs+,QTs+,JTs,ATo+,KJo+").unwrap();
         let range_3 = Range::from_str("22-TT,KTs+,QTs+,J9s+,T8s+,98s,87s,KJo+,QTo+,JTo,T9o,98o").unwrap();
@@ -242,7 +232,7 @@ mod tests {
         let ranges = vec![range_1, range_2, range_3];
         let board = Board::from_str("6h 8s 4s 4d Qc").unwrap();
         
-        let results = equity_enumerate(ranges, board).unwrap();
+        let results = equity_enumerate(ranges, board, &lookup).unwrap();
         assert_results_eq(&results, vec![13, 50, 37]);
     }
 
@@ -257,7 +247,8 @@ mod tests {
         let ranges = vec![range_1, range_2, range_3];
         let board = Board::from_str("Td 6d Qc 8s").unwrap();
         
-        let results = equity_enumerate(ranges, board).unwrap();
+        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
+        let results = equity_enumerate(ranges, board, &lookup).unwrap();
         assert_results_eq(&results, vec![37, 37, 26]);
     }
 
@@ -268,7 +259,8 @@ mod tests {
         let ranges = vec![range_1, range_2];
 
         let board = Board::from_str("Qh 4h 8c").unwrap();
-        let results = equity_enumerate(ranges, board).unwrap();
+        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
+        let results = equity_enumerate(ranges, board, &lookup).unwrap();
         assert_results_eq(&results, vec![67, 33]);
     }
 
@@ -279,7 +271,8 @@ mod tests {
         let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o").unwrap();
         let ranges = vec![range_1, range_2];
 
-        let results = equity_enumerate(ranges, Board::default()).unwrap();
+        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
+        let results = equity_enumerate(ranges, Board::default(), &lookup).unwrap();
         assert_results_eq(&results, vec![67, 33]);
     }
 }

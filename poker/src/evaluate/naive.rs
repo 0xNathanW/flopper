@@ -1,14 +1,13 @@
-use crate::card::Card;
+use crate::{error::{Error, Result}, card::Card};
 use super::HandRank;
 
-#[inline]
-pub fn rank_cards_naive(hand: &[Card]) -> HandRank {
+pub fn rank_cards_naive(hand: &[Card]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
 
     match hand.len() {
-        5 => rank_hand_5(hand),
-        6..=7 => rank_hand_not_5(hand),
-        _ => unreachable!(),
+        5 => Ok(rank_hand_5(hand)),
+        6..=7 => Ok(rank_hand_not_5(hand)),
+        _ => Err(Error::InvalidHandSize(hand.len())),
     }
 }
 
