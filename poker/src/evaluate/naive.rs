@@ -1,7 +1,7 @@
 use crate::{error::{Error, Result}, card::Card};
 use super::HandRank;
 
-pub fn rank_cards_naive(hand: &[Card]) -> Result<HandRank> {
+pub fn rank_hand_naive(hand: &[Card]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
 
     match hand.len() {

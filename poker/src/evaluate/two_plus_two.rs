@@ -30,20 +30,22 @@ pub fn load_lookup_table<P: AsRef<Path>>(path: P) -> Result<Vec<i32>> {
     Ok(lookup_table)
 }
 
-pub fn rank_hand_two_plus_two(hand: &[Card], lookup_table: &[i32]) -> Result<HandRank> {
+pub fn rank_hand_2p2(hand: &[Card], lookup_table: &[i32]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
     let rank = match hand.len() {
-        5 => rank_hand_5(hand, lookup_table),
-        6 => rank_hand_6(hand, lookup_table),
-        7 => rank_hand_7(hand, lookup_table),
+        5 => eval_5_2p2(hand, lookup_table),
+        6 => eval_6_2p2(hand, lookup_table),
+        7 => eval_7_2p2(hand, lookup_table),
         _ => return Err(Error::InvalidHandSize(hand.len())),
     };
 
     Ok(HandRank::from(rank))
 }
 
+// Raw hand evaluation functions.
+
 #[inline]
-pub fn rank_hand_5(hand: &[Card], lookup_table: &[i32]) -> u16 {
+pub fn eval_5_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;
     r = lookup_table[r + hand[2].0 as usize + 1] as usize;
@@ -54,7 +56,7 @@ pub fn rank_hand_5(hand: &[Card], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-pub fn rank_hand_6(hand: &[Card], lookup_table: &[i32]) -> u16 {
+pub fn eval_6_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;
     r = lookup_table[r + hand[2].0 as usize + 1] as usize;
@@ -66,7 +68,7 @@ pub fn rank_hand_6(hand: &[Card], lookup_table: &[i32]) -> u16 {
 }
 
 #[inline]
-pub fn rank_hand_7(hand: &[Card], lookup_table: &[i32]) -> u16 {
+pub fn eval_7_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;
     r = lookup_table[r + hand[2].0 as usize + 1] as usize;

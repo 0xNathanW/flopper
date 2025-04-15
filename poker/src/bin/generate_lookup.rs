@@ -2,7 +2,7 @@ use std::{collections::{BTreeMap, VecDeque}, fs::File, io::Write, path::PathBuf}
 use anyhow::Result;
 use clap::Parser;
 use indicatif::{ProgressBar, ProgressStyle};
-use poker::evaluate::{eval_5, eval_6, eval_7};
+use poker::evaluate::{eval_5_senzee, eval_6_senzee, eval_7_senzee};
 
 const TABLE_SIZE: usize = 32_487_834;
 const PRIMES: [i32; 13] = [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31, 37, 41];
@@ -282,9 +282,9 @@ pub fn do_eval(id: i64) -> i32 {
     }
 
     match num_eval_cards {
-        5 => eval_5(&new_work_cards[0..5]) as i32,
-        6 => eval_6(&new_work_cards[0..6]) as i32,
-        7 => eval_7(&new_work_cards[0..7]) as i32,
+        5 => eval_5_senzee(&new_work_cards[0..5]) as i32,
+        6 => eval_6_senzee(&new_work_cards[0..6]) as i32,
+        7 => eval_7_senzee(&new_work_cards[0..7]) as i32,
         _ => unreachable!(),
     }
 }

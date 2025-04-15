@@ -69,7 +69,7 @@ fn test_combo_5_two_plus_two() {
                         hand[3] = cards[d];
                         hand[4] = cards[e];
                         
-                        let rank_num = rank_hand_5(&hand, &lookup_table);
+                        let rank_num = eval_5_2p2(&hand, &lookup_table);
                         let rank = HandRank::from(rank_num);
                         rank_count
                             .entry(HandRank::rank_variant(rank))
@@ -115,7 +115,7 @@ fn test_combo_5_naive() {
                             cards[e],
                         ];
 
-                        let rank = rank_cards_naive(&hand);
+                        let rank = rank_hand_naive(&hand);
                         rank_count
                             .entry(HandRank::rank_variant(rank.unwrap()))
                             .and_modify(|count| *count += 1)

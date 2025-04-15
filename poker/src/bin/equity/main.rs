@@ -1,11 +1,83 @@
-use std::vec;
+use anyhow::{Result, Context};
+use clap::Parser;
+use prettytable::{Table, Row, Cell};
 use rayon::prelude::*;
-use crate::{board::Board, card::Card, deck::Deck, hand::Hand, range::Range, evaluate::rank_hand_7, equity::{setup_cards, EquityResults}, error::Result};
+use poker::{
+    board::Board, equity::EquityResults, evaluate::*, range::Range, deck::Deck, card::Card, hand::Hand, remove_dead
+};
 
-pub fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {
+#[derive(Debug, Parser)]
+#[command(author, version)]
+#[command(about="Range vs Range equity calculator")]
+struct Args {
+
+    #[arg(help = "String represention of ranges to compare. Eg. '22-77' 'A2s+, KQs'")]
+    ranges: Vec<String>,
+
+    #[arg(short, long, help = "Board cards (0-5). Eg. '8d Tc 2h', empty for no board")]
+    board: Option<String>,
+
+    #[arg(short, long, help = "Path to lookup table")]
+    lookup_path: String,
+}
+
+fn main() -> Result<()> {
+
+    let args = Args::parse();
+    let lookup_path = args.lookup_path;
+    let lookup = load_lookup_table(&lookup_path)?;
+
+    let mut ranges = Vec::new();
+    for (i, r) in args.ranges.iter().enumerate() {
+        let range = Range::from_str(r).with_context(|| format!("Failed to parse range number {}", i))?;
+        ranges.push(range);
+    }
+    if ranges.len() < 2 {
+        return Err(anyhow::anyhow!("At least 2 ranges are required"));
+    }
+
+    let board = if let Some(b) = args.board {
+        Board::from_str(&b)?
+    } else {
+        Board::default()
+    };
+
+    let results = equity_enumerate(ranges, board, &lookup).context("Failed to calculate equity")?;
+    print_output(args.ranges, results);
+
+    Ok(())
+}
+
+fn print_output(range_str: Vec<String>, results: EquityResults) {
+
+    let mut table = Table::new();
+    table.add_row(Row::new(vec![
+        Cell::new("Range"),
+        Cell::new("Equity"),
+        Cell::new("Win %"),
+        Cell::new("Tie %"),
+    ]));
+
+    let equities = results.equities();
+    let win_pct = results.wins.iter().map(|w| *w as f64 / results.total as f64 * 100.0).collect::<Vec<f64>>();
+    let tie_pct = results.ties.iter().map(|t| *t as f64 / results.total as f64 * 50.0).collect::<Vec<f64>>();
+
+    for i in 0..range_str.len() {
+        table.add_row(Row::new(vec![
+            Cell::new(range_str[i].as_str()),
+            Cell::new(format!("{:.2}%", equities[i]).as_str()),
+            Cell::new(format!("{:.2}%", win_pct[i]).as_str()),
+            Cell::new(format!("{:.2}%", tie_pct[i]).as_str()),
+        ]));
+    }
+
+    table.printstd();
+}
+
+fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {
 
     let board_cards = board.as_vec();
-    let (ranges, deck) = setup_cards(ranges, &board_cards)?;
+    let (ranges, deck) = remove_dead(ranges, &board_cards)?;
 
     if board.is_river_dealt() {
         enumerate_river(ranges, &board_cards, lookup)
@@ -19,82 +91,6 @@ pub fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Res
     } else {
         enumerate_preflop(ranges, deck, lookup)
     }
-}
-
-fn enumerate_hands(
-    ranges: &Vec<Vec<(Hand, f32)>>,
-    range_idx: usize,
-    used_cards: &mut u64,
-    hands: &mut Vec<Hand>,
-    board: &mut [Card; 7],
-    lookup_table: &[i32],
-    results: &mut EquityResults,
-) {
-
-    if range_idx == ranges.len() {
-
-        let mut best_idxs = vec![];
-        let mut best_rank = 0;
-        for (i, &hand) in hands.iter().enumerate() {
-
-            board[0] = hand.0;
-            board[1] = hand.1;
-            
-            let rank = rank_hand_7(board, lookup_table);
-            if rank > best_rank {
-                best_idxs.clear();
-                best_idxs.push(i);
-                best_rank = rank;
-            } else if rank == best_rank {
-                best_idxs.push(i);
-            }
-        }
-
-        if best_idxs.len() == 1 {
-            results.wins[best_idxs[0]] += 1;
-        } else {
-            // print!("Tie (rank: {:?})", HandRank::from(best_rank));
-            for idx in best_idxs {
-                // print!(" {:?}", hands[idx]);
-                // Ties need to be halved??
-                results.ties[idx] += 1;
-            }
-            // println!();
-        }
-        results.total += 1;
-        return;
-    }
-
-    for (hand, _weight) in &ranges[range_idx] {
-        if *used_cards & (1 << hand.0.0) != 0 || *used_cards & (1 << hand.1.0) != 0 {
-            continue;
-        }
-
-        *used_cards |= 1 << hand.0.0;
-        *used_cards |= 1 << hand.1.0;
-
-        hands.push(*hand);
-        enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
-        hands.pop();
-
-        *used_cards &= !(1 << hand.0.0);
-        *used_cards &= !(1 << hand.1.0);
-    }
-}
-
-fn enumerate_board(
-    ranges: &Vec<Vec<(Hand, f32)>>,
-    results: &mut EquityResults,
-    board: &mut [Card; 7],
-    lookup_table: &[i32],
-) {
-    let mut hands = Vec::with_capacity(ranges.len());
-    let mut used_cards = 0_u64;
-    for card in board[2..].iter() {
-        used_cards |= 1 << card.0;
-    }
-
-    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
 }
 
 fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
@@ -201,12 +197,95 @@ fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]
     Ok(results)
 }
 
+fn enumerate_hands(
+    ranges: &Vec<Vec<(Hand, f32)>>,
+    range_idx: usize,
+    used_cards: &mut u64,
+    hands: &mut Vec<Hand>,
+    board: &mut [Card; 7],
+    lookup_table: &[i32],
+    results: &mut EquityResults,
+) {
+
+    // Base case, one hand assigned to each player.
+    if range_idx == ranges.len() {
+
+        let mut best_idxs = vec![];
+        let mut best_rank = 0;
+        for (i, &hand) in hands.iter().enumerate() {
+
+            board[0] = hand.0;
+            board[1] = hand.1;
+            
+            let rank = eval_7_2p2(board, lookup_table);
+            if rank > best_rank {
+                best_idxs.clear();
+                best_idxs.push(i);
+                best_rank = rank;
+            } else if rank == best_rank {
+                best_idxs.push(i);
+            }
+        }
+
+        // If there is a single best hand, increment the win count for that hand.
+        if best_idxs.len() == 1 {
+            results.wins[best_idxs[0]] += 1;
+        } else {
+            // If there are multiple best hands, increment the tie count for each.
+            for idx in best_idxs {
+                results.ties[idx] += 1;
+            }
+        }
+
+        results.total += 1;
+        return;
+    }
+
+    for (hand, _weight) in &ranges[range_idx] {
+
+        // Skip if the hand contains a dead card.
+        if *used_cards & (1 << hand.0.0) != 0 || *used_cards & (1 << hand.1.0) != 0 {
+            continue;
+        }
+
+        *used_cards |= 1 << hand.0.0;
+        *used_cards |= 1 << hand.1.0;
+
+        hands.push(*hand);
+        enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
+        hands.pop();
+
+        *used_cards &= !(1 << hand.0.0);
+        *used_cards &= !(1 << hand.1.0);
+    }
+}
+
+fn enumerate_board(
+    ranges: &Vec<Vec<(Hand, f32)>>,
+    results: &mut EquityResults,
+    board: &mut [Card; 7],
+    lookup_table: &[i32],
+) {
+    let mut hands = Vec::with_capacity(ranges.len());
+    let mut used_cards = 0_u64;
+    for card in board[2..].iter() {
+        used_cards |= 1 << card.0;
+    }
+
+    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{equity::assert_results_eq, range::Range, evaluate::load_lookup_table};
     
     const LOOKUP_PATH: &str = "./data/lookup_table.bin";
+
+    pub fn assert_results_eq(results: &EquityResults, equities: Vec<u32>) {
+        for (i, pct) in equities.iter().enumerate() {
+            assert_eq!((results.equities()[i]).round() as u32, *pct);
+        }
+    }
 
     #[test]
     fn test_enumerate_river_heads_up() {

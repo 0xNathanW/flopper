@@ -78,7 +78,7 @@ fn test_combo_7_two_plus_two() {
                                 hand[5] = cards[f];
                                 hand[6] = cards[g];
                                 
-                                let rank_num = rank_hand_7(&hand, &lookup_table);
+                                let rank_num = eval_7_2p2(&hand, &lookup_table);
                                 let rank = HandRank::from(rank_num);
                                 rank_count
                                     .entry(HandRank::rank_variant(rank))
@@ -130,7 +130,7 @@ fn test_combo_7_naive() {
                                 hand[5] = cards[f];
                                 hand[6] = cards[g];
 
-                                let rank = rank_cards_naive(&hand).unwrap();
+                                let rank = rank_hand_naive(&hand).unwrap();
 
                                 rank_count
                                     .entry(HandRank::rank_variant(rank))

@@ -1,6 +1,3 @@
-use crate::{deck::Deck, card::Card, range::Range, hand::Hand, error::Result};
-
-pub use crate::enumerate::equity_enumerate;
 
 // Results of player i at index i.
 #[derive(Debug, Clone)]
@@ -45,30 +42,4 @@ impl EquityResults {
     }
 }
 
-// Remove combos conflicting with board and dead cards.
-pub fn setup_cards(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck)> {
-    
-    let mut deck = Deck::new();
-    let mut removed = 0_u64;
 
-    board.iter().for_each(|card| {
-        deck.remove(card);
-        removed |= 1 << card.0;
-    });
-        
-    let hands = ranges
-        .iter()
-        .map(|range| {
-            let hands = range.hand_combos_dead(removed);
-            hands
-        }).collect();
-
-    Ok((hands, deck))
-}
-
-#[cfg(test)]
-pub fn assert_results_eq(results: &EquityResults, equities: Vec<u32>) {
-    for (i, pct) in equities.iter().enumerate() {
-        assert_eq!((results.equities()[i]).round() as u32, *pct);
-    }
-}

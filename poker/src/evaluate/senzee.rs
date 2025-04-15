@@ -1,29 +1,16 @@
-use crate::{hand::Hand, card::Card, tables::*, error::{Error, Result}};
+use crate::{card::Card, tables::*, error::{Error, Result}};
 use super::HandRank;
 
-pub fn rank_hand_senzee(hand: &Hand, board: &[Card]) -> Result<HandRank> {
-    assert!(board.len() >= 3 && board.len() <= 5);
-
-    let mut cards = vec![Card::default(); 2 + board.len()];
-    cards[0] = hand.0;
-    cards[1] = hand.1;
-    cards[2.. 2 + board.len()].copy_from_slice(board);
- 
-    rank_cards_senzee(&cards)
-}
-
-pub fn rank_cards_senzee(hand: &[Card]) -> Result<HandRank> {
-    assert!(hand.len() >= 5 && hand.len() <= 7);
+pub fn rank_hand_senzee(hand: &[Card]) -> Result<HandRank> {
     let cards = hand.iter().map(|&c| c.bit_mask()).collect::<Vec<u32>>();
     rank_bit_mask_senzee(&cards)
 }
 
 pub fn rank_bit_mask_senzee(hand: &[u32]) -> Result<HandRank> {
-    assert!(hand.len() >= 5 && hand.len() <= 7);
     let rank_num = match hand.len() {
-        5 => eval_5(hand),
-        6 => eval_6(hand),
-        7 => eval_7(hand),
+        5 => eval_5_senzee(hand),
+        6 => eval_6_senzee(hand),
+        7 => eval_7_senzee(hand),
         _ => return Err(Error::InvalidHandSize(hand.len())),
     };
 
@@ -51,7 +38,9 @@ fn find(u: usize) -> usize {
     unreachable!("find_alt failed to find a match for {}. Low {}, high {}", u, low, high);
 }
 
-pub fn eval_5(hand: &[u32]) -> u16 {
+// Raw senzee evaluation functions, used in lookup generation.
+
+pub fn eval_5_senzee(hand: &[u32]) -> u16 {
     assert!(hand.len() == 5);
 
     let q = ((hand[0] | hand[1] | hand[2] | hand[3] | hand[4]) as usize) >> 16;
@@ -69,7 +58,7 @@ pub fn eval_5(hand: &[u32]) -> u16 {
     7461 - (rank - 1)
 }
 
-pub fn eval_6(hand: &[u32]) -> u16 {
+pub fn eval_6_senzee(hand: &[u32]) -> u16 {
     assert!(hand.len() == 6);
 
     let mut tmp;
@@ -82,7 +71,7 @@ pub fn eval_6(hand: &[u32]) -> u16 {
             sub_hand[i] = hand[id[i] as usize];
         }
 
-        tmp = eval_5(&sub_hand);
+        tmp = eval_5_senzee(&sub_hand);
         if tmp > best {
             best = tmp;
         }
@@ -91,7 +80,7 @@ pub fn eval_6(hand: &[u32]) -> u16 {
     best
 }
 
-pub fn eval_7(hand: &[u32]) -> u16 {
+pub fn eval_7_senzee(hand: &[u32]) -> u16 {
     assert!(hand.len() == 7);
 
     let mut tmp;
@@ -104,7 +93,7 @@ pub fn eval_7(hand: &[u32]) -> u16 {
             sub_hand[i] = hand[id[i] as usize];
         }
 
-        tmp = eval_5(&sub_hand);
+        tmp = eval_5_senzee(&sub_hand);
         if tmp > best {
             best = tmp;
         }
