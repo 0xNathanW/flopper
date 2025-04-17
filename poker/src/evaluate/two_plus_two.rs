@@ -44,7 +44,7 @@ pub fn rank_hand_2p2(hand: &[Card], lookup_table: &[i32]) -> Result<HandRank> {
 
 // Raw hand evaluation functions.
 
-#[inline]
+#[inline(always)]
 pub fn eval_5_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;
@@ -55,7 +55,7 @@ pub fn eval_5_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     r as u16
 }
 
-#[inline]
+#[inline(always)]
 pub fn eval_6_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;
@@ -67,7 +67,7 @@ pub fn eval_6_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     r as u16
 }
 
-#[inline]
+#[inline(always)]
 pub fn eval_7_2p2(hand: &[Card], lookup_table: &[i32]) -> u16 {
     let mut r = lookup_table[53 + hand[0].0 as usize + 1] as usize;
     r = lookup_table[r + hand[1].0 as usize + 1] as usize;

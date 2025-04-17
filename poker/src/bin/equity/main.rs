@@ -28,12 +28,12 @@ fn main() -> Result<()> {
     let lookup = load_lookup_table(&lookup_path)?;
 
     let mut ranges = Vec::new();
+    if args.ranges.len() < 2 || args.ranges.len() > 8 {
+        return Err(anyhow::anyhow!("Number of ranges must be between 2 and 8"));
+    }
     for (i, r) in args.ranges.iter().enumerate() {
         let range = Range::from_str(r).with_context(|| format!("Failed to parse range number {}", i))?;
         ranges.push(range);
-    }
-    if ranges.len() < 2 {
-        return Err(anyhow::anyhow!("At least 2 ranges are required"));
     }
 
     let board = if let Some(b) = args.board {
@@ -210,7 +210,8 @@ fn enumerate_hands(
     // Base case, one hand assigned to each player.
     if range_idx == ranges.len() {
 
-        let mut best_idxs = vec![];
+        let mut best_idxs = [0; 8];
+        let mut best_idxs_count = 0;
         let mut best_rank = 0;
         for (i, &hand) in hands.iter().enumerate() {
 
@@ -219,21 +220,22 @@ fn enumerate_hands(
             
             let rank = eval_7_2p2(board, lookup_table);
             if rank > best_rank {
-                best_idxs.clear();
-                best_idxs.push(i);
+                best_idxs[0] = i;
+                best_idxs_count = 1;
                 best_rank = rank;
             } else if rank == best_rank {
-                best_idxs.push(i);
+                best_idxs[best_idxs_count] = i;
+                best_idxs_count += 1;
             }
         }
 
         // If there is a single best hand, increment the win count for that hand.
-        if best_idxs.len() == 1 {
+        if best_idxs_count == 1 {
             results.wins[best_idxs[0]] += 1;
         } else {
             // If there are multiple best hands, increment the tie count for each.
-            for idx in best_idxs {
-                results.ties[idx] += 1;
+            for idx in 0..best_idxs_count {
+                results.ties[best_idxs[idx]] += 1;
             }
         }
 
@@ -243,20 +245,18 @@ fn enumerate_hands(
 
     for (hand, _weight) in &ranges[range_idx] {
 
-        // Skip if the hand contains a dead card.
-        if *used_cards & (1 << hand.0.0) != 0 || *used_cards & (1 << hand.1.0) != 0 {
+        let hand_mask = 1 << hand.0.0 | 1 << hand.1.0;
+        if *used_cards & hand_mask != 0 {
             continue;
         }
 
-        *used_cards |= 1 << hand.0.0;
-        *used_cards |= 1 << hand.1.0;
+        *used_cards |= hand_mask;
 
         hands.push(*hand);
         enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
         hands.pop();
 
-        *used_cards &= !(1 << hand.0.0);
-        *used_cards &= !(1 << hand.1.0);
+        *used_cards &= !hand_mask;
     }
 }
 
