@@ -32,12 +32,12 @@ fn main() -> Result<()> {
         return Err(anyhow::anyhow!("Number of ranges must be between 2 and 8"));
     }
     for (i, r) in args.ranges.iter().enumerate() {
-        let range = Range::from_str(r).with_context(|| format!("Failed to parse range number {}", i))?;
+        let range = Range::from_str(r).context("Failed to parse range")?;
         ranges.push(range);
     }
 
     let board = if let Some(b) = args.board {
-        Board::from_str(&b)?
+        Board::from_str(&b).context("Failed to parse board")?
     } else {
         Board::default()
     };

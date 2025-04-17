@@ -36,7 +36,7 @@ impl EquityResults {
     pub fn tie_pct(&self) -> Vec<f64> {
         let mut tie_pct = vec![0.0; self.wins.len()];
         for i in 0..self.wins.len() {
-            tie_pct[i] = self.ties[i] as f64 / self.total as f64 * 100.0 / 2.0;
+            tie_pct[i] = self.ties[i] as f64 / self.total as f64 * 100.0;
         }
         tie_pct
     }
