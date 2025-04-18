@@ -98,10 +98,9 @@ impl Board {
         mask
     }
 
-    pub fn flop_mask(&self) -> u64 {
-        assert!(self.is_flop_dealt());
+    pub fn dead_mask(&self) -> u64 {
         let mut mask: u64 = 0;
-        self.flop.iter().for_each(|c| mask |= c.mask());
+        self.as_vec().iter().for_each(|c| mask |= 1 << c.0);
         mask
     }
 

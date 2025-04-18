@@ -43,6 +43,10 @@ impl Deck {
     pub fn remove(&mut self, card: &Card) {
         self.0.retain(|c| c != card);
     }
+
+    pub fn remove_dead(&mut self, dead_mask: u64) {
+        self.0.retain(|card| (dead_mask & (1_u64 << card.0)) == 0);
+    }
 }
 
 impl Index<usize> for Deck {

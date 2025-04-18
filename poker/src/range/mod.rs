@@ -1,5 +1,5 @@
-use std::{ops::Deref, fmt::Debug};
-use crate::{hand::Hand, card::*};
+use std::{collections::{HashMap, HashSet}, ops::Deref};
+use crate::{card::*, hand::Hand, Board, isomorphism::valid_suit_permutations};
 
 mod parser;
 pub use parser::*;
@@ -87,75 +87,76 @@ impl Range {
     }
 
     // Returns all hands in the range with their weights.
-    pub fn hand_combos(&self) -> Vec<(Hand, f32)> {
-        
-        let mut hands = Vec::new();
-        for i in 0..1326 {
-
-            let weight = self[i];
-            if weight > 0.0 {
-                let hand = Hand::from_idx(i);
-                hands.push((hand, weight));
-            }
-        }
-        hands
-    }
-
-    // Same as hand_combos, but excludes hands with cards in the dead mask.
-    pub fn hand_combos_dead(&self, dead: u64) -> Vec<(Hand, f32)> {
+    pub fn hand_combos(&self, dead_mask: u64) -> Vec<(Hand, f32)> {
 
         let mut hands = Vec::new();
         for i in 0..52 {
             for j in (i + 1)..52 {
-
                 let hand = Hand(Card(i), Card(j));
                 let hand_mask = hand.mask();
                 let weight = self[hand.idx()];
 
-                if weight > 0.0  && hand_mask & dead == 0 {
+                if weight > 0.0 && hand_mask & dead_mask == 0 {
                     hands.push((hand, weight));
                 }
             }
         }
-        
         hands
     }
 
-    // Returns true if swapping two suits in the range does not change the hand weights.
-    pub fn suit_isomorphistic(&self, suits: [Suit; 2]) -> bool {
-        
-        let swap_suit = |suit| {
-            if suit == suits[0] {
-                suits[1]
-            } else if suit == suits[1] {
-                suits[0]
-            } else {
-                suit
-            }
-        };
+    fn pre_flop_hand_combos_isomorphic_suits(&self) -> Vec<(Hand, f32)> {
+        let mut canonical_hands = HashMap::new();
+        let hand_combos = self.hand_combos(0);
 
-        for a in (0..52).into_iter().map(|i| Card(i)) {
-            for b in ((a.0 + 1)..52).into_iter().map(|i| Card(i)) {
-                
-                let a_swapped = a.swap_suit(swap_suit(a.suit()));
-                let b_swapped = b.swap_suit(swap_suit(b.suit()));
-
-                let weight = self.get_hand_weight(&Hand(a, b));
-                let weight_swapped = self.get_hand_weight(&Hand(a_swapped, b_swapped));
-                
-                // If weights are different, then the range is not suit isomorphistic.
-                if weight != weight_swapped {
-                    return false;
-                }
+        for (mut hand, weight) in hand_combos.into_iter() {
+            if weight <= 0.0 {
+                continue;
             }
+
+            hand.canonicalise();
+            let entry = canonical_hands.entry(hand).or_insert((hand, 0.0, 0));
+            entry.1 += weight;
+            entry.2 += 1;
         }
 
-        true
+        let mut result = Vec::new();
+        for (_, (hand, weight, count)) in canonical_hands {
+            // Rejig the weights, average.
+            result.push((hand, weight / count as f32))
+        }
+
+        result
     }
-    
+
+    pub fn hand_combos_isomorphic_suits(&self, board: &Board) -> Vec<(Hand, f32)> {
+        
+        if !board.is_flop_dealt() {
+            return self.pre_flop_hand_combos_isomorphic_suits();
+        }
+
+        let mut canonical_hands = HashMap::new();
+        let suits_on_board: HashSet<_> = board.as_vec().iter().map(|c| c.suit()).collect();
+
+        let suit_permutations = valid_suit_permutations(&suits_on_board);
+        
+        for (mut hand, weight) in self.hand_combos(board.mask()) {
+            hand.canonicalise_with_board(&suit_permutations);
+            let entry = canonical_hands.entry(hand).or_insert((hand, 0.0, 0));
+            
+            entry.1 += weight;
+            entry.2 += 1;
+        }
+
+        let mut result = Vec::new();
+        for (_, (hand, weight, count)) in canonical_hands {
+            result.push((hand, weight / count as f32))
+        }
+
+        result
+    }
 }
 
-impl Debug for Range {
+impl std::fmt::Debug for Range {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         
         let mut s = String::new();

@@ -279,8 +279,8 @@ impl Card {
     }
 
     #[inline]
-    pub fn swap_suit(&self, suit: Suit) -> Card {
-        Card((self.0 & !3) | suit as u8)
+    pub fn swap_suit(&mut self, suit: Suit) {
+        self.0 = (self.0 & !3) | suit as u8;
     } 
 
     #[inline]
@@ -402,5 +402,12 @@ mod tests {
 
         assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c").unwrap());
         // assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah").unwrap());
+    }
+
+    #[test]
+    fn test_swap_suit() {
+        let mut card = Card::from_str("Ah").unwrap();
+        card.swap_suit(Suit::Diamonds);
+        assert_eq!(card, Card::from_str("Ad").unwrap());
     }
 }

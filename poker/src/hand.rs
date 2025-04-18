@@ -1,6 +1,8 @@
+use std::collections::HashMap;
+
 use thiserror::Error;
 use regex::Regex;
-use crate::card::{Card, Rank, CardParseError};
+use crate::{card::{Card, CardParseError, Rank, SUITS}, Suit};
 
 #[derive(Error, Debug)]
 pub enum HandParseError {
@@ -82,26 +84,51 @@ impl Hand {
         // Add 1 point if there is a 0 or 1 card gap and both cards are lower than a Q. (e.g. JT, 75, 32 etc, this bonus point does not apply to pocket pairs).
         base -= match gap {
             0 => 0.0,
-            1 => {
-                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+            1 => if self.0.rank().max(self.1.rank()) < Rank::Queen {
                     0.0
                 } else {
                     1.0
-                }
-            },
-            2 => {
-                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+                },
+            2 => if self.0.rank().max(self.1.rank()) < Rank::Queen {
                     1.0
                 } else {
                     2.0
-                }
-            },
+                },
             3 => 4.0,
             _ => 5.0,
         };
 
         // Round up to the nearest integer.
         base.ceil() as i32
+    }
+
+    pub fn canonicalise(&mut self) {
+        if self.0.suit() == self.1.suit() {
+            if self.0.suit() == Suit::Spades {
+                return
+            } else {
+                self.0.swap_suit(Suit::Spades);
+                self.1.swap_suit(Suit::Spades);
+            }
+        } else {
+            self.0.swap_suit(Suit::Spades);
+            self.1.swap_suit(Suit::Hearts);
+        }
+    }
+
+    pub fn canonicalise_with_board(&mut self, valid_permutations: &[[Suit; 4]]) {
+        
+        for perm in valid_permutations {
+            let suit_map: HashMap<Suit, Suit> = (0..4).map(|i| (SUITS[i], perm[i])).collect();
+            let mut transformed = self.clone();
+            transformed.0.swap_suit(*suit_map.get(&self.0.suit()).unwrap());
+            transformed.1.swap_suit(*suit_map.get(&self.1.suit()).unwrap());
+        
+            if transformed.0.suit() == Suit::Spades || (transformed.0.suit() == transformed.1.suit() && transformed.0.suit() == Suit::Spades) {
+                *self = transformed;
+                return;
+            }
+        }
     }
 }
 
@@ -166,4 +193,17 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_canonicalise() {
+        let mut hand = Hand::from_str("AhAc").unwrap();
+        hand.canonicalise();
+        assert_eq!(hand, Hand::from_str("AsAh").unwrap());
+
+        let mut hand = Hand::from_str("AdAd").unwrap();
+        hand.canonicalise();
+        assert_eq!(hand, Hand::from_str("AsAs").unwrap());
+    }
+
+
 }
