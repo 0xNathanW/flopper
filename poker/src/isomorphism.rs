@@ -82,7 +82,7 @@ mod tests {
         // For one locked suit, should have 6 permutations (3!)
         assert_eq!(permutations.len(), 6);
         
-        // Verify hearts is always in its original position
+        // Verify hearts is always in its original position.
         for perm in &permutations {
             assert_eq!(perm[1], Suit::Hearts);
         }
@@ -99,7 +99,7 @@ mod tests {
         // For two locked suits, should have 2 permutations (2!)
         assert_eq!(permutations.len(), 2);
         
-        // Verify locked suits are in original positions
+        // Verify locked suits are in original positions.
         for perm in &permutations {
             assert_eq!(perm[0], Suit::Spades);
             assert_eq!(perm[1], Suit::Hearts);
@@ -115,10 +115,7 @@ mod tests {
         
         let permutations = valid_suit_permutations(&suits);
         
-        // For three locked suits, should have 1 permutation (1!)
         assert_eq!(permutations.len(), 1);
-        
-        // Verify identity permutation
         assert_eq!(permutations[0], [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs]);
     }
 }

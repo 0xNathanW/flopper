@@ -6,8 +6,6 @@ use poker::{
     board::Board, equity::EquityResults, evaluate::*, range::Range, deck::Deck, card::Card, hand::Hand,
 };
 
-mod isomorphism;
-
 #[derive(Debug, Parser)]
 #[command(author, version)]
 #[command(about="Range vs Range equity calculator")]
@@ -33,7 +31,7 @@ fn main() -> Result<()> {
     if args.ranges.len() < 2 || args.ranges.len() > 8 {
         return Err(anyhow::anyhow!("Number of ranges must be between 2 and 8"));
     }
-    for (i, r) in args.ranges.iter().enumerate() {
+    for r in args.ranges.iter() {
         let range = Range::from_str(r).context("Failed to parse range")?;
         ranges.push(range);
     }
@@ -82,7 +80,7 @@ fn preprocess(ranges: Vec<Range>, board: &Board) -> (Vec<Vec<(Hand, f32)>>, Deck
     let dead_mask = board.dead_mask();
     deck.remove_dead(dead_mask);
 
-    (ranges.into_iter().map(|range| range.hand_combos(dead_mask)).collect(), deck)
+    (ranges.into_iter().map(|range| range.hand_combos_isomorphic_suits(board)).collect(), deck)
 }
 
 fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {

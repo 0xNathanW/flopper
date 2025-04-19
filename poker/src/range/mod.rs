@@ -140,7 +140,7 @@ impl Range {
         let suit_permutations = valid_suit_permutations(&suits_on_board);
         
         for (mut hand, weight) in self.hand_combos(board.mask()) {
-            hand.canonicalise_with_board(&suit_permutations);
+            hand.canonicalise_with_constraints(&suit_permutations);
             let entry = canonical_hands.entry(hand).or_insert((hand, 0.0, 0));
             
             entry.1 += weight;
@@ -203,7 +203,7 @@ impl std::fmt::Debug for Range {
 }
 
 // Indexes of paired hands.
-pub fn pair_idxs(rank: Rank) -> Vec<usize> {
+fn pair_idxs(rank: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(6);
     for i in 0..4 {
@@ -221,7 +221,7 @@ pub fn pair_idxs(rank: Rank) -> Vec<usize> {
 }
 
 // Indexes of suited hands.
-pub fn suited_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
+fn suited_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(4);
     for a in SUITS.iter() {
@@ -237,7 +237,7 @@ pub fn suited_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
 }
 
 // Indexes of offsuit hands.
-pub fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
+fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
     
     let mut idxs = Vec::with_capacity(12);
     for a in SUITS.iter() {
@@ -258,10 +258,10 @@ pub fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
 
     #[test]
     fn test() {
-
         let a = [
             1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
             1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
@@ -277,11 +277,53 @@ mod tests {
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
             0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
         ];
-        let range = super::Range::new_from_grid(a.to_vec());
+        let range = Range::new_from_grid(a.to_vec());
 
         let b = "QQ+, AQs+, KQs, AQo+, KQo";
-        let range_2 = super::Range::from_str(b).unwrap();
+        let range_2 = Range::from_str(b).unwrap();
 
         assert_eq!(range.hands, range_2.hands);
+    }
+
+    #[test]
+    fn test_preflop_hand_combos_isomorphic_suits() {
+        let range = Range::from_str("AKs").unwrap();
+        
+        let original_combos = range.hand_combos(0);
+        assert_eq!(original_combos.len(), 4);
+        
+        let preprocessed = range.pre_flop_hand_combos_isomorphic_suits();
+        assert_eq!(preprocessed.len(), 1);
+        
+        let canonical_hand = preprocessed[0].0;
+        assert_eq!(canonical_hand.0.suit(), Suit::Spades);
+        assert_eq!(canonical_hand.1.suit(), Suit::Spades);
+    }
+
+    #[test]
+    fn test_preprocessing_with_board() {
+        let range = Range::from_str("AKs, AQo").unwrap();
+        
+        let preprocessed = range.pre_flop_hand_combos_isomorphic_suits();
+        assert_eq!(preprocessed.len(), 2);
+        
+        let original_combos = range.hand_combos(0);
+        let board = Board::from_vec(vec![
+            Card::from_str("Ah").unwrap(),
+            Card::from_str("Th").unwrap(),
+            Card::from_str("7h").unwrap(),
+        ]).unwrap();
+        
+        let preprocessed_with_board = range.hand_combos_isomorphic_suits(&board);
+        
+        println!("Original combos: {}, With board preprocessing: {}", original_combos.len(), preprocessed_with_board.len());
+        
+        assert!(!preprocessed_with_board.is_empty());
+        
+        for (hand, _) in &preprocessed_with_board {
+            if hand.0.rank() == Rank::Ace && hand.1.rank() == Rank::King && hand.0.suit() == hand.1.suit() {
+                assert_ne!(hand.0.suit(), Suit::Hearts);
+            }
+        }
     }
 }

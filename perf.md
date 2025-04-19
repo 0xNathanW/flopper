@@ -44,4 +44,4 @@ Performance counter stats for 'cargo run --bin equity -r -- 77+, A9s+, KTs+, AJo
 129.5 seconds
 123.1 seconds
 
-hand mask slight optimisation.
+Results:

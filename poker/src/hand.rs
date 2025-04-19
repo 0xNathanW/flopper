@@ -116,7 +116,7 @@ impl Hand {
         }
     }
 
-    pub fn canonicalise_with_board(&mut self, valid_permutations: &[[Suit; 4]]) {
+    pub fn canonicalise_with_constraints(&mut self, valid_permutations: &[[Suit; 4]]) {
         
         for perm in valid_permutations {
             let suit_map: HashMap<Suit, Suit> = (0..4).map(|i| (SUITS[i], perm[i])).collect();
@@ -136,6 +136,8 @@ impl Hand {
 mod tests {
     use super::*;
     use crate::card::{Rank, Suit};
+    use crate::isomorphism::valid_suit_permutations;
+    use std::collections::HashSet;
 
     #[test]
     fn test_from_str() {
@@ -204,6 +206,4 @@ mod tests {
         hand.canonicalise();
         assert_eq!(hand, Hand::from_str("AsAs").unwrap());
     }
-
-
 }
