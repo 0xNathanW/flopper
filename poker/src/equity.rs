@@ -2,18 +2,18 @@
 // Results of player i at index i.
 #[derive(Debug, Clone)]
 pub struct EquityResults {
-    pub wins:   Vec<usize>,
-    pub ties:   Vec<usize>,
-    pub total:  usize,
+    pub wins:   Vec<f32>,
+    pub ties:   Vec<f32>,
+    pub total:  f32,
 }
 
 impl EquityResults {
 
     pub fn new(num_players: usize) -> Self {
         Self {
-            wins:   vec![0; num_players],
-            ties:   vec![0; num_players],
-            total:  0,
+            wins:   vec![0.0; num_players],
+            ties:   vec![0.0; num_players],
+            total:  0.0,
         }
     }
 

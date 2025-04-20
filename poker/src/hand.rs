@@ -12,8 +12,29 @@ pub enum HandParseError {
     CardError(#[from] CardParseError),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct Hand(pub Card, pub Card);
+
+impl PartialEq for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}
+
+impl Eq for Hand {}
+
+impl std::hash::Hash for Hand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        // Sort cards to ensure consistent hashing regardless of order
+        let (min, max) = if self.0 < self.1 {
+            (self.0, self.1)
+        } else {
+            (self.1, self.0)
+        };
+        min.hash(state);
+        max.hash(state);
+    }
+}
 
 impl Hand {
     pub fn from_str(s: &str) -> Result<Hand, HandParseError> {
@@ -116,28 +137,76 @@ impl Hand {
         }
     }
 
-    pub fn canonicalise_with_constraints(&mut self, valid_permutations: &[[Suit; 4]]) {
-        
-        for perm in valid_permutations {
-            let suit_map: HashMap<Suit, Suit> = (0..4).map(|i| (SUITS[i], perm[i])).collect();
-            let mut transformed = self.clone();
-            transformed.0.swap_suit(*suit_map.get(&self.0.suit()).unwrap());
-            transformed.1.swap_suit(*suit_map.get(&self.1.suit()).unwrap());
-        
-            if transformed.0.suit() == Suit::Spades || (transformed.0.suit() == transformed.1.suit() && transformed.0.suit() == Suit::Spades) {
-                *self = transformed;
-                return;
-            }
+   pub fn canonicalise_with_constraints(&mut self, valid_permutations: &[[Suit; 4]]) {
+    // Build all the permuted+sorted variants
+    let mut candidates: Vec<Hand> = valid_permutations.iter().map(|perm| {
+        let mut h = self.clone();
+        h.0.swap_suit(perm[self.0.suit() as usize]);
+        h.1.swap_suit(perm[self.1.suit() as usize]);
+        // Now *sort* so that the “best” suit (♠ > ♥ > ♣ > ♦) is always in h.0
+        if should_swap(&h.0, &h.1) {
+            h.0 = std::mem::replace(&mut h.1, h.0);
         }
+        h
+    }).collect();
+
+    candidates.sort();
+    *self = candidates.remove(0);
+} 
+}
+
+fn should_swap(a: &Card, b: &Card) -> bool {
+    if b.suit() != a.suit() {
+        b.suit() > a.suit()
+    } else {
+        b.rank() > a.rank()
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::card::{Rank, Suit};
-    use crate::isomorphism::valid_suit_permutations;
+    use crate::{card::{Rank, Suit}, evaluate::{eval_7_2p2, eval_7_senzee, load_lookup_table, rank_hand_senzee}, isomorphism::valid_suit_permutations, Board, Range};
     use std::collections::HashSet;
+
+    #[test]
+    fn test_hand_equality() {
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        assert_eq!(hand1, hand2);
+        
+        let hand3 = Hand::from_str("Ah7d").unwrap();
+        let hand4 = Hand::from_str("7dAh").unwrap();
+        assert_eq!(hand3, hand4);
+        
+        let hand5 = Hand::from_str("Ah7d").unwrap();
+        let hand6 = Hand::from_str("7hAd").unwrap();
+        assert_ne!(hand5, hand6);
+    }
+
+    #[test]
+    fn test_hand_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        fn get_hash<T: Hash>(t: &T) -> u64 {
+            let mut s = DefaultHasher::new();
+            t.hash(&mut s);
+            s.finish()
+        }
+
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        
+        assert_eq!(get_hash(&hand1), get_hash(&hand2));
+        
+        let mut set = HashSet::new();
+        set.insert(hand1);
+        assert!(set.contains(&hand2));
+        assert_eq!(set.len(), 1);
+        set.insert(hand2);
+        assert_eq!(set.len(), 1);
+    }
 
     #[test]
     fn test_from_str() {
@@ -205,5 +274,36 @@ mod tests {
         let mut hand = Hand::from_str("AdAd").unwrap();
         hand.canonicalise();
         assert_eq!(hand, Hand::from_str("AsAs").unwrap());
+    }
+
+    // Ensures that when ranked, the canonicalised hand is the same as the original hand.
+    #[test]
+    fn test_canonicalise_equivalence() {
+
+        let board = Board::from_str("2d 3d 8d Td 4d").unwrap();
+        let suits_on_board = HashSet::from_iter(board.as_vec().iter().map(|c| c.suit()));
+        let mut hand = [Card::default(); 7];
+        for (i, c) in board.as_vec().iter().enumerate() {
+            hand[i] = *c;
+        }
+        let valid_permutations = valid_suit_permutations(&suits_on_board);
+        let range = Range::from_str("22+, A3s+, T4o+").unwrap();
+        let mut unique_canonical_hands = HashSet::new();
+        let mut unique_original_hands = HashSet::new();
+        let combos = range.hand_combos(board.dead_mask());
+        for (hole, _weight) in combos {
+            let mut c_hole = hole.clone();
+            c_hole.canonicalise_with_constraints(&valid_permutations);
+            hand[5] = hole.0;
+            hand[6] = hole.1;
+            let orig_rank = rank_hand_senzee(&hand).unwrap();
+            hand[5] = c_hole.0;
+            hand[6] = c_hole.1;
+            let canonical_rank = rank_hand_senzee(&hand).unwrap();
+            assert_eq!(orig_rank, canonical_rank);
+            unique_canonical_hands.insert(c_hole);
+            unique_original_hands.insert(hole);
+        }
+        println!("reduced from {} to {}", unique_original_hands.len(), unique_canonical_hands.len());
     }
 }

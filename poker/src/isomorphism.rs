@@ -2,8 +2,7 @@ use crate::card::{Suit, SUITS};
 use std::collections::HashSet;
 
 pub fn valid_suit_permutations(suits_on_board: &HashSet<Suit>) -> Vec<[Suit; 4]> {
-    // Start with identity permutation.
-    let mut result = vec![[Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs]];
+    let mut result = vec![SUITS];
     
     let free_suits: Vec<Suit> = SUITS.iter()
         .filter(|suit| !suits_on_board.contains(suit))
@@ -14,23 +13,20 @@ pub fn valid_suit_permutations(suits_on_board: &HashSet<Suit>) -> Vec<[Suit; 4]>
         .filter(|&i| !suits_on_board.contains(&SUITS[i]))
         .collect();
     
-    // Base case - no free suits or just one free suit.
+    // base case
     if free_suits.len() <= 1 {
         return result;
     }
     
-    // Generate all permutations of the free suits
     let mut free_suit_perms = Vec::new();
     permute_array(&free_suits, &mut free_suit_perms);
     
-    // For each permutation of free suits, create a valid global permutation
     let base_perm = result[0];
     result.clear();
     
     for perm in free_suit_perms {
         let mut new_perm = base_perm;
         
-        // Place the permuted free suits into their corresponding positions
         for (i, pos) in free_positions.iter().enumerate() {
             new_perm[*pos] = perm[i];
         }

@@ -86,6 +86,7 @@ fn preprocess(ranges: Vec<Range>, board: &Board) -> (Vec<Vec<(Hand, f32)>>, Deck
 fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {
 
     let (ranges, deck) = preprocess(ranges, &board);
+    
     let board_cards = board.as_vec();
     let deck_cards = deck.as_ref();
 
@@ -212,6 +213,7 @@ fn enumerate_hands(
     range_idx: usize,
     used_cards: &mut u64,
     hands: &mut Vec<Hand>,
+    current_weight: f32,
     board: &mut [Card; 7],
     lookup_table: &[i32],
     results: &mut EquityResults,
@@ -223,6 +225,7 @@ fn enumerate_hands(
         let mut best_idxs = [0; 8];
         let mut best_idxs_count = 0;
         let mut best_rank = 0;
+        
         for (i, &hand) in hands.iter().enumerate() {
 
             board[0] = hand.0;
@@ -236,24 +239,22 @@ fn enumerate_hands(
             } else if rank == best_rank {
                 best_idxs[best_idxs_count] = i;
                 best_idxs_count += 1;
-            }
-        }
+            }        }
 
-        // If there is a single best hand, increment the win count for that hand.
         if best_idxs_count == 1 {
-            results.wins[best_idxs[0]] += 1;
+            results.wins[best_idxs[0]] += current_weight;
         } else {
-            // If there are multiple best hands, increment the tie count for each.
+            let split_weight = current_weight / best_idxs_count as f32;
             for idx in 0..best_idxs_count {
-                results.ties[best_idxs[idx]] += 1;
+                results.ties[best_idxs[idx]] += split_weight;
             }
         }
 
-        results.total += 1;
+        results.total += current_weight;
         return;
     }
 
-    for (hand, _weight) in &ranges[range_idx] {
+    for (hand, weight) in &ranges[range_idx] {
 
         let hand_mask = 1 << hand.0.0 | 1 << hand.1.0;
         if *used_cards & hand_mask != 0 {
@@ -263,7 +264,8 @@ fn enumerate_hands(
         *used_cards |= hand_mask;
 
         hands.push(*hand);
-        enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
+        let new_weight = current_weight * weight;
+        enumerate_hands(ranges, range_idx + 1, used_cards, hands, new_weight, board, lookup_table, results);
         hands.pop();
 
         *used_cards &= !hand_mask;
@@ -281,8 +283,7 @@ fn enumerate_board(
     for card in board[2..].iter() {
         used_cards |= 1 << card.0;
     }
-
-    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
+    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, 1.0, board, lookup_table, results);
 }
 
 #[cfg(test)]

@@ -114,18 +114,11 @@ impl Range {
             }
 
             hand.canonicalise();
-            let entry = canonical_hands.entry(hand).or_insert((hand, 0.0, 0));
-            entry.1 += weight;
-            entry.2 += 1;
+            let entry = canonical_hands.entry(hand).or_insert(0.0);
+            *entry += weight;
         }
 
-        let mut result = Vec::new();
-        for (_, (hand, weight, count)) in canonical_hands {
-            // Rejig the weights, average.
-            result.push((hand, weight / count as f32))
-        }
-
-        result
+        canonical_hands.into_iter().map(|(hand, weight)| (hand, weight)).collect()
     }
 
     pub fn hand_combos_isomorphic_suits(&self, board: &Board) -> Vec<(Hand, f32)> {
@@ -141,18 +134,11 @@ impl Range {
         
         for (mut hand, weight) in self.hand_combos(board.mask()) {
             hand.canonicalise_with_constraints(&suit_permutations);
-            let entry = canonical_hands.entry(hand).or_insert((hand, 0.0, 0));
-            
-            entry.1 += weight;
-            entry.2 += 1;
+            let entry = canonical_hands.entry(hand).or_insert(0.0);
+            *entry += weight;
         }
 
-        let mut result = Vec::new();
-        for (_, (hand, weight, count)) in canonical_hands {
-            result.push((hand, weight / count as f32))
-        }
-
-        result
+        canonical_hands.into_iter().map(|(hand, weight)| (hand, weight)).collect()
     }
 }
 
@@ -307,7 +293,6 @@ mod tests {
         let preprocessed = range.pre_flop_hand_combos_isomorphic_suits();
         assert_eq!(preprocessed.len(), 2);
         
-        let original_combos = range.hand_combos(0);
         let board = Board::from_vec(vec![
             Card::from_str("Ah").unwrap(),
             Card::from_str("Th").unwrap(),
@@ -315,15 +300,21 @@ mod tests {
         ]).unwrap();
         
         let preprocessed_with_board = range.hand_combos_isomorphic_suits(&board);
-        
-        println!("Original combos: {}, With board preprocessing: {}", original_combos.len(), preprocessed_with_board.len());
-        
         assert!(!preprocessed_with_board.is_empty());
-        
         for (hand, _) in &preprocessed_with_board {
             if hand.0.rank() == Rank::Ace && hand.1.rank() == Rank::King && hand.0.suit() == hand.1.suit() {
                 assert_ne!(hand.0.suit(), Suit::Hearts);
             }
+        }
+    }
+
+    #[test]
+    fn test_hand_combos_extra() {
+        let range = Range::from_str("KK+").unwrap();
+        let board = Board::from_str("2d 3d 8d Td Jd").unwrap();
+        let hands = range.hand_combos_isomorphic_suits(&board);
+        for (hand, weight) in hands {
+            println!("{:?} {}", hand, weight);
         }
     }
 }

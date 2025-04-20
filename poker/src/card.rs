@@ -12,12 +12,12 @@ pub enum CardParseError {
     InvalidLength(usize),
 }
 
-#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash)]
+#[derive(PartialEq, Eq, Debug, Clone, Copy, Hash, PartialOrd)]
 pub enum Suit { 
-    Clubs,
-    Diamonds,
-    Hearts,
     Spades,
+    Hearts,
+    Diamonds,
+    Clubs,
 }
 
 pub const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
@@ -25,10 +25,10 @@ pub const SUITS: [Suit; 4] = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::
 impl From<u8> for Suit {
     fn from(value: u8) -> Self {
         match value {
-            0 => Suit::Clubs,
-            1 => Suit::Diamonds,
-            2 => Suit::Hearts,
-            3 => Suit::Spades,
+            0 => Suit::Spades,
+            1 => Suit::Hearts,
+            2 => Suit::Diamonds,
+            3 => Suit::Clubs,
             _ => panic!("Invalid suit value: {}", value),
         }
     }
@@ -389,7 +389,7 @@ mod tests {
     #[test]
     fn test_suit_u8() {
         let card = Card::new(Rank::Ace, Suit::Hearts);
-        assert!(card.suit() as u8 == 0);
+        assert!(card.suit() as u8 == 1);
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
         assert!(card.suit() as u8 == 3);
@@ -401,7 +401,6 @@ mod tests {
         assert_eq!(Card::from_str("Ah").unwrap().bit_mask(), 0b00010000_00000000_00011100_00101001);
 
         assert_eq!(Card::from_bit_mask(0b00000000_00001000_10000011_00000111), Card::from_str("5c").unwrap());
-        // assert_eq!(Card::from_bit_mask(0b00010000_00000000_00101100_00101001), Card::from_str("Ah").unwrap());
     }
 
     #[test]
@@ -409,5 +408,13 @@ mod tests {
         let mut card = Card::from_str("Ah").unwrap();
         card.swap_suit(Suit::Diamonds);
         assert_eq!(card, Card::from_str("Ad").unwrap());
+    }
+
+    #[test]
+    fn test_extra() {
+        let card = Card::from_str("2h").unwrap();
+        let card2 = Card::from_str("2s").unwrap();
+        println!("{:?}", card.bit_mask());
+        println!("{:?}", card2.bit_mask());
     }
 }

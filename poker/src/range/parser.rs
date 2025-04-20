@@ -298,8 +298,11 @@ mod tests {
 
     #[test]
     fn test_parser() {
-        let range = Range::from_str("[0.5]22+[/0.5][1.0]K2s+[/1.0][0.7]A7o+[/0.7]").unwrap();
-        println!("{:?}", range);
+        let range = Range::from_str("KK+").unwrap();
+        assert_eq!(range.hand_combos(0).len(), 12);
+
+        let range = Range::from_str("AA,KK+").unwrap();
+        assert_eq!(range.hand_combos(0).len(), 12);
     }
 
     #[test]
