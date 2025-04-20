@@ -4,6 +4,7 @@ use crate::{card::*, hand::Hand, Board, isomorphism::valid_suit_permutations};
 mod parser;
 pub use parser::*;
 
+#[derive(Clone)]
 pub struct Range {
     name:   String,
     hands:  [f32; 1326],
@@ -312,6 +313,8 @@ mod tests {
     fn test_hand_combos_extra() {
         let range = Range::from_str("KK+").unwrap();
         let board = Board::from_str("2d 3d 8d Td Jd").unwrap();
+        let total_weight = range.clone().hand_combos(board.mask()).iter().map(|(_, w)| *w).sum::<f32>();
+        println!("total weight: {}", total_weight);
         let hands = range.hand_combos_isomorphic_suits(&board);
         for (hand, weight) in hands {
             println!("{:?} {}", hand, weight);

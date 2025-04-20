@@ -3,7 +3,7 @@ use clap::Parser;
 use prettytable::{Table, Row, Cell};
 use rayon::prelude::*;
 use poker::{
-    board::Board, equity::EquityResults, evaluate::*, range::Range, deck::Deck, card::Card, hand::Hand,
+    board::Board, equity::EquityResults, evaluate::*, range::Range, deck::Deck, card::Card, hand::Hand
 };
 
 #[derive(Debug, Parser)]
@@ -80,31 +80,31 @@ fn preprocess(ranges: Vec<Range>, board: &Board) -> (Vec<Vec<(Hand, f32)>>, Deck
     let dead_mask = board.dead_mask();
     deck.remove_dead(dead_mask);
 
-    (ranges.into_iter().map(|range| range.hand_combos_isomorphic_suits(board)).collect(), deck)
+    let ranges = ranges.into_iter().map(|range| range.hand_combos_isomorphic_suits(board)).collect();
+
+    (ranges, deck)
 }
 
 fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<EquityResults> {
 
     let (ranges, deck) = preprocess(ranges, &board);
-    
     let board_cards = board.as_vec();
-    let deck_cards = deck.as_ref();
 
     if board.is_river_dealt() {
         enumerate_river(ranges, &board_cards, lookup)
 
     } else if board.is_turn_dealt() {
-        enumerate_turn(ranges, &board_cards, &deck_cards, lookup)
+        enumerate_turn(ranges, &board_cards, deck, lookup)
     
     } else if board.is_flop_dealt() {
-        enumerate_flop(ranges, &board_cards, &deck_cards, lookup)
+        enumerate_flop(ranges, &board_cards, deck, lookup)
     
     } else {
-        enumerate_preflop(ranges, &deck_cards, lookup)
+        enumerate_preflop(ranges, deck, lookup)
     }
 }
 
-fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: &[Card], lookup: &[i32]) -> Result<EquityResults> {
+fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
@@ -141,7 +141,7 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: &[Card], lookup: &[i32
     Ok(total)
 }
 
-fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: &[Card], lookup: &[i32]) -> Result<EquityResults> {
+fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
@@ -170,7 +170,7 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: &[Card], 
     Ok(total)
 }
 
-fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: &[Card], lookup: &[i32]) -> Result<EquityResults> {
+fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
     let results = (0..deck.len()).into_par_iter().map(|a| {
         
@@ -225,7 +225,6 @@ fn enumerate_hands(
         let mut best_idxs = [0; 8];
         let mut best_idxs_count = 0;
         let mut best_rank = 0;
-        
         for (i, &hand) in hands.iter().enumerate() {
 
             board[0] = hand.0;
@@ -239,11 +238,14 @@ fn enumerate_hands(
             } else if rank == best_rank {
                 best_idxs[best_idxs_count] = i;
                 best_idxs_count += 1;
-            }        }
+            }
+        }
 
+        // If there is a single best hand, increment the win count for that hand.
         if best_idxs_count == 1 {
             results.wins[best_idxs[0]] += current_weight;
         } else {
+            // If there are multiple best hands, increment the tie count for each.
             let split_weight = current_weight / best_idxs_count as f32;
             for idx in 0..best_idxs_count {
                 results.ties[best_idxs[idx]] += split_weight;
@@ -283,6 +285,7 @@ fn enumerate_board(
     for card in board[2..].iter() {
         used_cards |= 1 << card.0;
     }
+
     enumerate_hands(ranges, 0, &mut used_cards, &mut hands, 1.0, board, lookup_table, results);
 }
 
