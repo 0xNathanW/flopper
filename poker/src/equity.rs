@@ -17,26 +17,26 @@ impl EquityResults {
         }
     }
 
-    pub fn equities(&self) -> Vec<f64> {
+    pub fn equities(&self) -> Vec<f32> {
         let mut equities = vec![0.0; self.wins.len()];
         for i in 0..self.wins.len() {
-            equities[i] = ((self.wins[i] as f64 + self.ties[i] as f64 / 2.0) / self.total as f64) * 100.0;
+            equities[i] = ((self.wins[i] + self.ties[i] / 2.0) / self.total) * 100.0;
         }
         equities
     }
 
-    pub fn win_pct(&self) -> Vec<f64> {
+    pub fn win_pct(&self) -> Vec<f32> {
         let mut win_pct = vec![0.0; self.wins.len()];
         for i in 0..self.wins.len() {
-            win_pct[i] = self.wins[i] as f64 / self.total as f64 * 100.0;
+            win_pct[i] = self.wins[i] / self.total * 100.0;
         }
         win_pct
     }
 
-    pub fn tie_pct(&self) -> Vec<f64> {
+    pub fn tie_pct(&self) -> Vec<f32> {
         let mut tie_pct = vec![0.0; self.wins.len()];
         for i in 0..self.wins.len() {
-            tie_pct[i] = self.ties[i] as f64 / self.total as f64 * 100.0;
+            tie_pct[i] = self.ties[i] / self.total * 100.0;
         }
         tie_pct
     }
