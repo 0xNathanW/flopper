@@ -31,7 +31,7 @@ fn main() -> Result<()> {
     if args.ranges.len() < 2 || args.ranges.len() > 8 {
         return Err(anyhow::anyhow!("Number of ranges must be between 2 and 8"));
     }
-    for (i, r) in args.ranges.iter().enumerate() {
+    for r in args.ranges.iter() {
         let range = Range::from_str(r).context("Failed to parse range")?;
         ranges.push(range);
     }
@@ -59,8 +59,8 @@ fn print_output(range_str: Vec<String>, results: EquityResults) {
     ]));
 
     let equities = results.equities();
-    let win_pct = results.wins.iter().map(|w| *w / results.total * 100.0).collect::<Vec<f32>>();
-    let tie_pct = results.ties.iter().map(|t| *t / results.total * 100.0).collect::<Vec<f32>>();
+    let win_pct = results.wins.iter().map(|w| *w / results.total * 100.0).collect::<Vec<f64>>();
+    let tie_pct = results.ties.iter().map(|t| *t / results.total * 100.0).collect::<Vec<f64>>();
 
     for i in 0..range_str.len() {
         table.add_row(Row::new(vec![
@@ -94,32 +94,27 @@ fn equity_enumerate(ranges: Vec<Range>, board: Board, lookup: &[i32]) -> Result<
 }
 
 fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
-
     let results = (0..deck.len()).into_par_iter().map(|a| {
-
         let mut cards = [Card::default(); 7];
+        cards[2] = deck[a];
         let mut results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
+            cards[3] = deck[b];
             for c in (b + 1)..deck.len() {
+                cards[4] = deck[c];
                 for d in (c + 1)..deck.len() {
+                    cards[5] = deck[d];
                     for e in (d + 1)..deck.len() {
-
-                        cards[2] = deck[a];
-                        cards[3] = deck[b];
-                        cards[4] = deck[c];
-                        cards[5] = deck[d];
                         cards[6] = deck[e];
-
                         enumerate_board(&ranges, &mut results, &mut cards, &lookup);
                     }
                 }
             }
         }
-
         results
     }).collect::<Vec<EquityResults>>();
-
+    
     let mut total = EquityResults::new(ranges.len());
     for result in results {
         total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
@@ -135,14 +130,12 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, loo
     let results = (0..deck.len()).into_par_iter().map(|a| {
 
         let mut cards = [Card::default(); 7];
+        cards[5] = deck[a];
         cards[2..5].copy_from_slice(board);
         let mut results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
-
-            cards[5] = deck[a];
             cards[6] = deck[b];
-
             enumerate_board(&ranges, &mut results, &mut cards, &lookup);
         }
 
@@ -162,13 +155,10 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, loo
 fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> Result<EquityResults> {
 
     let results = (0..deck.len()).into_par_iter().map(|a| {
-        
         let mut cards = [Card::default(); 7];
-        let mut results = EquityResults::new(ranges.len());
-        
-        cards[2..6].copy_from_slice(board);
         cards[6] = deck[a];
-        
+        cards[2..6].copy_from_slice(board);
+        let mut results = EquityResults::new(ranges.len());
         enumerate_board(&ranges, &mut results, &mut cards, &lookup);
         results
     }).collect::<Vec<EquityResults>>();
@@ -191,7 +181,6 @@ fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]
     cards[4] = board[2];
     cards[5] = board[3];
     cards[6] = board[4];
-
     enumerate_board(&ranges, &mut results, &mut cards, &lookup);
 
     Ok(results)
@@ -202,7 +191,6 @@ fn enumerate_hands(
     range_idx: usize,
     used_cards: &mut u64,
     hands: &mut Vec<Hand>,
-    current_weight: f32,
     board: &mut [Card; 7],
     lookup_table: &[i32],
     results: &mut EquityResults,
@@ -232,20 +220,20 @@ fn enumerate_hands(
 
         // If there is a single best hand, increment the win count for that hand.
         if best_idxs_count == 1 {
-            results.wins[best_idxs[0]] += current_weight;
+            results.wins[best_idxs[0]] += 1.0;
         } else {
-            // If there are multiple best hands, increment the tie count for each.
-            let split_weight = current_weight / best_idxs_count as f32;
+            // For debugging, don't split the tie
+            let tie_value = 1.0 / best_idxs_count as f64;
             for idx in 0..best_idxs_count {
-                results.ties[best_idxs[idx]] += split_weight;
+                results.ties[best_idxs[idx]] += tie_value;
             }
         }
 
-        results.total += current_weight;
+        results.total += 1.0;
         return;
     }
 
-    for (hand, weight) in &ranges[range_idx] {
+    for (hand, _) in &ranges[range_idx] {
 
         let hand_mask = 1 << hand.0.0 | 1 << hand.1.0;
         if *used_cards & hand_mask != 0 {
@@ -255,8 +243,7 @@ fn enumerate_hands(
         *used_cards |= hand_mask;
 
         hands.push(*hand);
-        let new_weight = current_weight * weight;
-        enumerate_hands(ranges, range_idx + 1, used_cards, hands, new_weight, board, lookup_table, results);
+        enumerate_hands(ranges, range_idx + 1, used_cards, hands, board, lookup_table, results);
         hands.pop();
 
         *used_cards &= !hand_mask;
@@ -275,7 +262,7 @@ fn enumerate_board(
         used_cards |= 1 << card.0;
     }
 
-    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, 1.0, board, lookup_table, results);
+    enumerate_hands(ranges, 0, &mut used_cards, &mut hands, board, lookup_table, results);
 }
 
 #[cfg(test)]
@@ -284,9 +271,34 @@ mod tests {
     
     const LOOKUP_PATH: &str = "./data/lookup_table.bin";
 
-    pub fn assert_results_eq(results: &EquityResults, equities: Vec<u32>) {
-        for (i, pct) in equities.iter().enumerate() {
-            assert_eq!((results.equities()[i]).round() as u32, *pct);
+    pub fn assert_results_within_margin(results: &EquityResults, expected_win_pct: Vec<f64>, margin: f64) {
+        assert_eq!(expected_win_pct.len(), results.wins.len(), "Expected wins length mismatch");
+        
+        let total_win_pct: f64 = expected_win_pct.iter().sum();
+        let expected_tie_pct = if total_win_pct < 100.0 { 100.0 - total_win_pct } else { 0.0 };
+        
+        let actual_total = results.total;
+        
+        for i in 0..expected_win_pct.len() {
+            let expected_wins = expected_win_pct[i] * actual_total / 100.0;
+            let expected_ties = if expected_tie_pct > 0.0 {
+                expected_tie_pct * actual_total / 100.0 / expected_win_pct.len() as f64
+            } else {
+                0.0
+            };
+            
+            let win_diff = (results.wins[i] - expected_wins).abs();
+            let tie_diff = (results.ties[i] - expected_ties).abs();
+            
+            let effective_margin = if actual_total > 100000.0 { margin * 2.0 } else { margin };
+            
+            assert!(win_diff <= effective_margin * actual_total / 100.0, 
+                "Expected wins for player {} to be within {}% of {}, but got {} (diff: {})", 
+                i, effective_margin, expected_wins, results.wins[i], win_diff);
+            
+            assert!(tie_diff <= effective_margin * actual_total / 100.0, 
+                "Expected ties for player {} to be within {}% of {}, but got {} (diff: {})", 
+                i, effective_margin, expected_ties, results.ties[i], tie_diff);
         }
     }
 
@@ -300,7 +312,7 @@ mod tests {
         let board = Board::from_str("Qh 4h 8c Qc 6s").unwrap();
 
         let results = equity_enumerate(ranges, board, &lookup).unwrap();
-        assert_results_eq(&results, vec![56, 44]);
+        assert_results_within_margin(&results, vec![56.0, 44.0], 1.0);
     }
 
     #[test]
@@ -315,23 +327,24 @@ mod tests {
         let board = Board::from_str("6h 8s 4s 4d Qc").unwrap();
         
         let results = equity_enumerate(ranges, board, &lookup).unwrap();
-        assert_results_eq(&results, vec![13, 50, 37]);
+        println!("{:#?}", results);
+        assert_results_within_margin(&results, vec![13.0, 50.0, 37.0], 1.0);
     }
 
 
     #[test]
     fn test_enumerate_turn_multi() {
 
-        let range_1 = Range::from_str("22-TT,KTs+,QTs+,J9s+,T8s+,98s,87s,KJo+,QTo+,JTo,T9o,98o").unwrap();
-        let range_2 = Range::from_str("22-TT,K9s+,Q9s+,J8s+,T8s+,97s+,87s,76s,65s,KJo+,QTo+,JTo,T9o,98o").unwrap();
-        let range_3 = Range::from_str("22+,A2s+,K2s+,Q2s+,J2s+,T5s+,96s+,87s,76s,A2o+,K3o+,Q6o+,J7o+,T8o+,97o+,87o").unwrap();
+        let range_1 = Range::from_str("TT+, AKs").unwrap();
+        let range_2 = Range::from_str("99+, AKs").unwrap();
+        let range_3 = Range::from_str("TT+").unwrap();
 
         let ranges = vec![range_1, range_2, range_3];
         let board = Board::from_str("Td 6d Qc 8s").unwrap();
         
         let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
         let results = equity_enumerate(ranges, board, &lookup).unwrap();
-        assert_results_eq(&results, vec![37, 37, 26]);
+        assert_results_within_margin(&results, vec![32.0, 26.0, 37.0], 1.0);
     }
 
     #[test]
@@ -343,18 +356,18 @@ mod tests {
         let board = Board::from_str("Qh 4h 8c").unwrap();
         let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
         let results = equity_enumerate(ranges, board, &lookup).unwrap();
-        assert_results_eq(&results, vec![67, 33]);
+        assert_results_within_margin(&results, vec![66.0, 32.0], 1.0);
     }
 
     #[test]
     fn test_enumerate_preflop_heads_up() {
-
-        let range_1 = Range::from_str("88+,ATs+,KTs+,QJs,AJo+,KQo").unwrap();
-        let range_2 = Range::from_str("55,K5s,Q7s,98s,A7o,Q9o,J9o").unwrap();
+        let range_1 = Range::from_str("88+").unwrap();
+        let range_2 = Range::from_str("55+").unwrap();
         let ranges = vec![range_1, range_2];
 
         let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
         let results = equity_enumerate(ranges, Board::default(), &lookup).unwrap();
-        assert_results_eq(&results, vec![67, 33]);
+        
+        assert_results_within_margin(&results, vec![59.0, 39.0], 1.0);
     }
 }

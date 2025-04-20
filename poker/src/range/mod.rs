@@ -259,7 +259,7 @@ pub fn offsuit_idxs(rank_1: Rank, rank_2: Rank) -> Vec<usize> {
 mod tests {
 
     #[test]
-    fn test() {
+    fn test_parse_range() {
 
         let a = [
             1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 
