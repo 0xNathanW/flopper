@@ -17,15 +17,8 @@ impl Deck {
         Deck((0..52_u8).map(|i| i.into()).collect())
     }
 
-    pub fn new_shuffled() -> Deck {
-        let mut deck = Deck::new();
-        deck.shuffle();
-        deck
-    }
-
-    pub fn shuffle(&mut self) {
-        let mut rng = thread_rng();
-        self.0.shuffle(&mut rng);
+    pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
+        self.0.shuffle(rng);
     }
 
     pub fn len(&self) -> usize {

@@ -26,7 +26,7 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) 
     let results = (0..deck.len()).into_par_iter().map(|a| {
         let mut cards = [Card::default(); 7];
         cards[2] = deck[a];
-        let mut results = EquityResults::new(ranges.len());
+        let mut local_results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
             cards[3] = deck[b];
@@ -36,12 +36,12 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) 
                     cards[5] = deck[d];
                     for e in (d + 1)..deck.len() {
                         cards[6] = deck[e];
-                        enumerate_board(&ranges, &mut results, &mut cards, &lookup);
+                        enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
                     }
                 }
             }
         }
-        results
+        local_results
     }).collect::<Vec<EquityResults>>();
     
     let mut total = EquityResults::new(ranges.len());
@@ -61,14 +61,14 @@ fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, loo
         let mut cards = [Card::default(); 7];
         cards[5] = deck[a];
         cards[2..5].copy_from_slice(board);
-        let mut results = EquityResults::new(ranges.len());
+        let mut local_results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
             cards[6] = deck[b];
-            enumerate_board(&ranges, &mut results, &mut cards, &lookup);
+            enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
         }
 
-        results
+        local_results
     }).collect::<Vec<EquityResults>>();
 
     let mut total = EquityResults::new(ranges.len());
@@ -87,9 +87,9 @@ fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, loo
         let mut cards = [Card::default(); 7];
         cards[6] = deck[a];
         cards[2..6].copy_from_slice(board);
-        let mut results = EquityResults::new(ranges.len());
-        enumerate_board(&ranges, &mut results, &mut cards, &lookup);
-        results
+        let mut local_results = EquityResults::new(ranges.len());
+        enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
+        local_results
     }).collect::<Vec<EquityResults>>();
 
     let mut total = EquityResults::new(ranges.len());

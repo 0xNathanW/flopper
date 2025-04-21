@@ -5,6 +5,8 @@ use poker::{board::Board, equity::EquityResults, evaluate::*, range::Range};
 
 mod enumerate;
 use enumerate::equity_enumerate;
+mod monte_carlo;
+use monte_carlo::equity_monte_carlo;
 
 #[derive(Debug, Parser)]
 #[command(author, version)]
@@ -19,6 +21,12 @@ struct Args {
 
     #[arg(short, long, help = "Path to lookup table")]
     lookup_path: String,
+    
+    #[arg(short, long, help = "Use Monte Carlo simulation instead of enumeration")]
+    monte_carlo: bool,
+    
+    #[arg(short, long, help = "Number of iterations for Monte Carlo simulation (default: run until SIGINT)")]
+    iterations: Option<usize>,
 }
 
 fn main() -> Result<()> {
@@ -42,7 +50,18 @@ fn main() -> Result<()> {
         Board::default()
     };
 
-    let results = equity_enumerate(ranges, board, &lookup).context("Failed to calculate equity")?;
+    let results = if args.monte_carlo {
+        println!("Running Monte Carlo simulation{}...", 
+                 if let Some(iters) = args.iterations { 
+                     format!(" for {} iterations", iters) 
+                 } else { 
+                     " (Ctrl+C to stop)".to_string() 
+                 });
+        equity_monte_carlo(ranges, board, &lookup, args.iterations).context("Failed to calculate equity")?
+    } else {
+        equity_enumerate(ranges, board, &lookup).context("Failed to calculate equity")?
+    };
+    
     print_output(args.ranges, results);
 
     Ok(())
