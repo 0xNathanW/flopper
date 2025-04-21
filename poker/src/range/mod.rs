@@ -4,6 +4,7 @@ use crate::{hand::Hand, card::*};
 mod parser;
 pub use parser::*;
 
+#[derive(Clone)]
 pub struct Range {
     name:   String,
     hands:  [f32; 1326],

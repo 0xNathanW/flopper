@@ -1,7 +1,6 @@
 use std::{io::{self, Read}, path::Path};
-use crate::card::Card;
+use crate::{card::Card, error::{Error, Result}};
 use super::HandRank;
-use crate::error::{Error, Result};
 
 const TABLE_SIZE: usize = 32_487_834;
 

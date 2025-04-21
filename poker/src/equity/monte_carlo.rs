@@ -1,35 +1,29 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
-use std::time::Instant;
-use poker::{equity::EquityResults, evaluate::eval_7_2p2, remove_dead, Board, Card, Deck, Hand, Range, error::Result};
+use crate::{evaluate::eval_7_2p2, prelude::*};
+use super::{EquityParams, EquityResults, remove_dead};
 use rayon::prelude::*;
 use rand::prelude::*;
 use signal_hook::flag;
 
-// The number of matchups to simulate per board.
-const MATCHUPS_PER_BOARD: usize = 10;
+pub fn equity_monte_carlo(params: EquityParams, iterations: Option<usize>) -> Result<EquityResults> {
 
-pub fn equity_monte_carlo(ranges: Vec<Range>, board: Board, lookup: &[i32], iterations: Option<usize>) -> Result<EquityResults> {
-
-    let board_cards = board.as_vec();
-    let (ranges, deck) = remove_dead(ranges, &board_cards)?;
+    let board_cards = params.board.as_vec();
+    let (ranges, deck) = remove_dead(params.ranges, &board_cards)?;
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
     flag::register(signal_hook::consts::SIGINT, r)?;
 
-    let start_time = Instant::now();
-    let results = if board.is_river_dealt() {
-        monte_carlo_river(ranges, &board_cards, lookup)
-    } else if board.is_turn_dealt() {
-        monte_carlo_turn(ranges, &board_cards, deck, lookup, iterations, running)
-    } else if board.is_flop_dealt() {
-        monte_carlo_flop(ranges, &board_cards, deck, lookup, iterations, running)
+    let results = if params.board.is_river_dealt() {
+        monte_carlo_river(ranges, &board_cards, params.lookup, iterations, running)
+    } else if params.board.is_turn_dealt() {
+        monte_carlo_turn(ranges, &board_cards, deck, params.lookup, iterations, running)
+    } else if params.board.is_flop_dealt() {
+        monte_carlo_flop(ranges, &board_cards, deck, params.lookup, iterations, running)
     } else {
-        monte_carlo_preflop(ranges, deck, lookup, iterations, running)
+        monte_carlo_preflop(ranges, deck, params.lookup, iterations, running)
     };
 
-    let duration = start_time.elapsed();
-    println!("Simulation completed in {:.2?}", duration);
     Ok(results)
 }
 
@@ -181,20 +175,45 @@ fn monte_carlo_turn(
     total
 }
 
-fn monte_carlo_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]) -> EquityResults {
-    let mut results = EquityResults::new(ranges.len());
-    let mut cards = [Card::default(); 7];
-    cards[2..7].copy_from_slice(board);
+fn monte_carlo_river(
+    ranges: Vec<Vec<(Hand, f32)>>,
+    board: &[Card],
+    lookup: &[i32],
+    iterations: Option<usize>,
+    running: Arc<AtomicBool>,
+) -> EquityResults {
+    let num_threads = rayon::current_num_threads();
+    let iterations_per_thread = iterations.map(|i| (i + num_threads - 1) / num_threads);
     
-    let mut used_cards = 0u64;
-    for card in board.iter() {
-        used_cards |= 1 << card.0;
+    let results = (0..num_threads).into_par_iter().map(|_| {
+        let mut rng = rand::thread_rng();
+        let mut local_results = EquityResults::new(ranges.len());
+        let mut cards = [Card::default(); 7];
+        cards[2..7].copy_from_slice(board);
+        let mut iteration = 0;
+        
+        let mut used_cards = 0u64;
+        for card in board.iter() {
+            used_cards |= 1 << card.0;
+        }
+        
+        while running.load(Ordering::Relaxed) && (iterations_per_thread.is_none() || iteration < iterations_per_thread.unwrap()) {
+            monte_carlo_sample_hands(&ranges, &mut rng, &mut local_results, &mut cards, lookup, used_cards);
+            iteration += 1;
+        }
+        
+        local_results
+    }).collect::<Vec<EquityResults>>();
+    
+    // Combine results from all threads
+    let mut total = EquityResults::new(ranges.len());
+    for result in results {
+        total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
+        total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
+        total.total += result.total;
     }
     
-    let mut rng = rand::thread_rng();
-    monte_carlo_sample_hands(&ranges, &mut rng, &mut results, &mut cards, lookup, used_cards);
-    
-    results
+    total
 }
 
 fn monte_carlo_sample_hands(
@@ -259,34 +278,5 @@ fn monte_carlo_sample_hands(
         }
         
         results.total += 1.0;
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use poker::evaluate::load_lookup_table;
-    use crate::print_output;
-
-    use super::*;
-    
-    const LOOKUP_PATH: &str = "./data/lookup_table.bin";
-
-    #[test]
-    fn test_monte_carlo_preflop_heads_up() {
-        let range_1 = Range::from_str("88+").unwrap();
-        let range_2 = Range::from_str("55+").unwrap();
-        let ranges = vec![range_1, range_2];
-
-        let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
-        // Run 10,000 iterations for testing
-        let results = equity_monte_carlo(ranges, Board::default(), &lookup, Some(10_000_000)).unwrap();
-        
-        // Monte Carlo should get approximately the same results as enumeration
-        // Results from enumerate test: 59%, 39%
-        let win_pcts = results.win_pct();
-        // Use a wide margin because of randomness
-        assert!((win_pcts[0] - 59.0).abs() < 5.0, "Expected win percentage for player 1 to be close to 59%, got {}%", win_pcts[0]);
-        assert!((win_pcts[1] - 39.0).abs() < 5.0, "Expected win percentage for player 2 to be close to 39%, got {}%", win_pcts[1]);
-        print_output(vec!["88+".to_string(), "55+".to_string()], results);
     }
 }

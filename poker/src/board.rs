@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use thiserror::Error;
 use crate::card::{Card, CardParseError};
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, Clone)]
 pub struct Board {
     pub flop:  [Card; 3],
     pub turn:  Card,

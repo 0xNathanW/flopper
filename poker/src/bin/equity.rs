@@ -1,12 +1,6 @@
 use anyhow::{Result, Context};
 use clap::Parser;
-use prettytable::{Table, Row, Cell};
-use poker::{board::Board, equity::EquityResults, evaluate::*, range::Range};
-
-mod enumerate;
-use enumerate::equity_enumerate;
-mod monte_carlo;
-use monte_carlo::equity_monte_carlo;
+use poker::{prelude::*, equity::{equity_enumerate, equity_monte_carlo, EquityParams}};
 
 #[derive(Debug, Parser)]
 #[command(author, version)]
@@ -50,6 +44,12 @@ fn main() -> Result<()> {
         Board::default()
     };
 
+    let params = EquityParams {
+        ranges,
+        board,
+        lookup: &lookup,
+    };
+
     let results = if args.monte_carlo {
         println!("Running Monte Carlo simulation{}...", 
                  if let Some(iters) = args.iterations { 
@@ -57,38 +57,12 @@ fn main() -> Result<()> {
                  } else { 
                      " (Ctrl+C to stop)".to_string() 
                  });
-        equity_monte_carlo(ranges, board, &lookup, args.iterations).context("Failed to calculate equity")?
+        equity_monte_carlo(params, args.iterations).context("Failed to calculate equity")?
     } else {
-        equity_enumerate(ranges, board, &lookup).context("Failed to calculate equity")?
+        equity_enumerate(params).context("Failed to calculate equity")?
     };
     
-    print_output(args.ranges, results);
+    results.print(&args.ranges);
 
     Ok(())
-}
-
-fn print_output(range_str: Vec<String>, results: EquityResults) {
-
-    let mut table = Table::new();
-    table.add_row(Row::new(vec![
-        Cell::new("Range"),
-        Cell::new("Equity"),
-        Cell::new("Win %"),
-        Cell::new("Tie %"),
-    ]));
-
-    let equities = results.equities();
-    let win_pct = results.wins.iter().map(|w| *w / results.total * 100.0).collect::<Vec<f64>>();
-    let tie_pct = results.ties.iter().map(|t| *t / results.total * 100.0).collect::<Vec<f64>>();
-
-    for i in 0..range_str.len() {
-        table.add_row(Row::new(vec![
-            Cell::new(range_str[i].as_str()),
-            Cell::new(format!("{:.2}%", equities[i]).as_str()),
-            Cell::new(format!("{:.2}%", win_pct[i]).as_str()),
-            Cell::new(format!("{:.2}%", tie_pct[i]).as_str()),
-        ]));
-    }
-
-    table.printstd();
 }

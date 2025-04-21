@@ -1,5 +1,5 @@
 use thiserror::Error;
-use crate::Card;
+use crate::card::Card;
 
 #[derive(Debug, Error)]
 pub enum Error {

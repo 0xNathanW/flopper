@@ -1,6 +1,8 @@
 mod naive;
 mod two_plus_two;
 mod senzee;
+#[cfg(test)]
+mod tests;
 
 pub use naive::rank_hand_naive;
 pub use senzee::{

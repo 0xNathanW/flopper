@@ -46,7 +46,6 @@ impl Index<usize> for Deck {
     }
 }
 
-// Implement the IntoIterator trait for a reference to Deck
 impl<'a> IntoIterator for &'a Deck {
     type Item = &'a Card;
     type IntoIter = std::slice::Iter<'a, Card>;
