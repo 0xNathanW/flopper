@@ -6,6 +6,7 @@ pub fn rank_hand_senzee(hand: &[Card]) -> Result<HandRank> {
     rank_bit_mask_senzee(&cards)
 }
 
+
 pub fn rank_bit_mask_senzee(hand: &[u32]) -> Result<HandRank> {
     let rank_num = match hand.len() {
         5 => eval_5_senzee(hand),

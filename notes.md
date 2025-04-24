@@ -1,1 +1,1 @@
-- faster random alorithm
+- faster random alorithm: fastrng

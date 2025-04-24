@@ -1,7 +1,7 @@
 use crate::{error::{Error, Result}, card::Card};
 use super::HandRank;
 
-pub fn rank_hand_naive(hand: &[Card]) -> Result<HandRank> {
+pub fn rank_hand_bits(hand: &[Card]) -> Result<HandRank> {
     assert!(hand.len() >= 5 && hand.len() <= 7);
 
     match hand.len() {
@@ -34,7 +34,7 @@ fn rank_hand_not_5(cards: &[Card]) -> HandRank {
 
     // Flush/straight flush.
     if let Some(flush) = flush {
-        // Check for straight flush.
+        // Check for straight flush.32 
         if let Some(straight_flush) = find_straight(suit_set[flush]) {
             HandRank::StraightFlush(straight_flush)
         } else {
@@ -197,141 +197,4 @@ fn n_msb(r: u32, n: u32) -> u32 {
 #[inline]
 fn msb(r: u32) -> u32 {
     1 << (31 - r.leading_zeros())
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use crate::card::Card;
-
-    // Helper function to create cards from short strings like "As", "Kd", "2c"
-    fn cards(hand_str: &str) -> Vec<Card> {
-        hand_str.split_whitespace()
-            .map(|s| Card::from_str(s).unwrap())
-            .collect()
-    }
-
-    // Helper to convert Vec<Card> to fixed-size array needed by rank_hand_naive
-    fn as_array(cards: &[Card]) -> [Card; 5] {
-        let mut result = [Card::default(); 5];
-        result.copy_from_slice(&cards[0..5]);
-        result
-    }
-
-    #[test]
-    fn test_straight_flush() {
-        let ace_high = as_array(&cards("As Ks Qs Js Ts"));
-        let five_high = as_array(&cards("5h 4h 3h 2h Ah"));
-        
-        let rank1 = rank_hand_naive(&ace_high).unwrap();
-        let rank2 = rank_hand_naive(&five_high).unwrap();
-        
-        assert!(matches!(rank1, HandRank::StraightFlush(_)));
-        assert!(matches!(rank2, HandRank::StraightFlush(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_four_of_a_kind() {
-        let four_aces = as_array(&cards("As Ad Ah Ac Ks"));
-        let four_twos = as_array(&cards("2s 2d 2h 2c As"));
-        
-        let rank1 = rank_hand_naive(&four_aces).unwrap();
-        let rank2 = rank_hand_naive(&four_twos).unwrap();
-        
-        assert!(matches!(rank1, HandRank::FourOfAKind(_)));
-        assert!(matches!(rank2, HandRank::FourOfAKind(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_full_house() {
-        let aces_full = as_array(&cards("As Ad Ah Ks Kd"));
-        let twos_full = as_array(&cards("2s 2d 2h As Ad"));
-        
-        let rank1 = rank_hand_naive(&aces_full).unwrap();
-        let rank2 = rank_hand_naive(&twos_full).unwrap();
-        
-        assert!(matches!(rank1, HandRank::FullHouse(_)));
-        assert!(matches!(rank2, HandRank::FullHouse(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_flush() {
-        let ace_high = as_array(&cards("As Qs Ts 8s 5s"));
-        let king_high = as_array(&cards("Kc Jc 9c 7c 4c"));
-        
-        let rank1 = rank_hand_naive(&ace_high).unwrap();
-        let rank2 = rank_hand_naive(&king_high).unwrap();
-        
-        assert!(matches!(rank1, HandRank::Flush(_)));
-        assert!(matches!(rank2, HandRank::Flush(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_straight() {
-        let ace_high = as_array(&cards("As Kd Qh Jc Ts"));
-        let five_high = as_array(&cards("5s 4d 3h 2c As"));
-        
-        let rank1 = rank_hand_naive(&ace_high).unwrap();
-        let rank2 = rank_hand_naive(&five_high).unwrap();
-        
-        assert!(matches!(rank1, HandRank::Straight(_)));
-        assert!(matches!(rank2, HandRank::Straight(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_three_of_a_kind() {
-        let three_aces = as_array(&cards("As Ad Ah Ks Qs"));
-        let three_twos = as_array(&cards("2s 2d 2h As Ks"));
-        
-        let rank1 = rank_hand_naive(&three_aces).unwrap();
-        let rank2 = rank_hand_naive(&three_twos).unwrap();
-        
-        assert!(matches!(rank1, HandRank::ThreeOfAKind(_)));
-        assert!(matches!(rank2, HandRank::ThreeOfAKind(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_two_pair() {
-        let aces_kings = as_array(&cards("As Ad Ks Kd Qs"));
-        let twos_threes = as_array(&cards("2s 2d 3s 3d As"));
-        
-        let rank1 = rank_hand_naive(&aces_kings).unwrap();
-        let rank2 = rank_hand_naive(&twos_threes).unwrap();
-        
-        assert!(matches!(rank1, HandRank::TwoPair(_)));
-        assert!(matches!(rank2, HandRank::TwoPair(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_one_pair() {
-        let pair_aces = as_array(&cards("As Ad Ks Qs Js"));
-        let pair_twos = as_array(&cards("2s 2d As Ks Qs"));
-        
-        let rank1 = rank_hand_naive(&pair_aces).unwrap();
-        let rank2 = rank_hand_naive(&pair_twos).unwrap();
-        
-        assert!(matches!(rank1, HandRank::Pair(_)));
-        assert!(matches!(rank2, HandRank::Pair(_)));
-        assert!(rank1 > rank2);
-    }
-
-    #[test]
-    fn test_high_card() {
-        let ace_high = as_array(&cards("As Qd Th 8c 6s"));
-        let king_high = as_array(&cards("Ks Jd 9h 7c 5s"));
-        
-        let rank1 = rank_hand_naive(&ace_high).unwrap();
-        let rank2 = rank_hand_naive(&king_high).unwrap();
-        
-        assert!(matches!(rank1, HandRank::HighCard(_)));
-        assert!(matches!(rank2, HandRank::HighCard(_)));
-        assert!(rank1 > rank2);
-    }
 }

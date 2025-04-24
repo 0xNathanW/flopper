@@ -1,10 +1,10 @@
-mod naive;
+mod bits;
 mod two_plus_two;
 mod senzee;
 #[cfg(test)]
 mod tests;
 
-pub use naive::rank_hand_naive;
+pub use bits::rank_hand_bits;
 pub use senzee::{
     rank_hand_senzee, 
     rank_bit_mask_senzee,

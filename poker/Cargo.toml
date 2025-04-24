@@ -13,6 +13,7 @@ indicatif = "0.17.3"
 prettytable-rs = "0.10.0"
 anyhow = "1.0.98"
 signal-hook = "0.3.15"
+fastrand = "2.0.1"
 
 [dev-dependencies]
 md-5 = "0.10.5"

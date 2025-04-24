@@ -29,6 +29,10 @@ impl Deck {
         self.0.pop()
     }
 
+    pub fn pop_n(&mut self, n: usize) -> Vec<Card> {
+        self.0.drain(0..n).collect()
+    }
+    
     pub fn push(&mut self, card: Card) {
         self.0.push(card);
     }
@@ -51,7 +55,7 @@ impl<'a> IntoIterator for &'a Deck {
     type IntoIter = std::slice::Iter<'a, Card>;
 
     fn into_iter(self) -> Self::IntoIter {
-        (self.0).iter()
+        self.0.iter()
     }
 }
 

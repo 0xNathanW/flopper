@@ -201,6 +201,10 @@ impl Card {
         Card(4 * (rank as u8) + (suit as u8))
     }
 
+    pub fn random<R: Rng>(rng: &mut R) -> Card {
+        Card(rng.gen_range(0..52))
+    }
+
     pub fn is_valid(&self) -> bool {
         self.0 < 52
     }
@@ -262,10 +266,6 @@ impl Card {
             i += 2;
         }
         Ok(cards)
-    }
-
-    pub fn random<R: Rng>(rng: &mut R) -> Card {
-        rng.gen_range(0..52).into()
     }
 
     #[inline]

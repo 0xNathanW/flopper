@@ -1,7 +1,7 @@
 use crate::card::Card;
 use super::{
     HandRank,
-    naive::rank_hand_naive,
+    bits::rank_hand_bits,
     senzee::rank_hand_senzee,
     two_plus_two::{rank_hand_2p2, load_lookup_table},
 };
@@ -68,7 +68,7 @@ mod tests {
             let hand = cards_arr(hand_str);
             
             // Test each algorithm
-            let naive_rank = rank_hand_naive(&hand).unwrap();
+            let naive_rank = rank_hand_bits(&hand).unwrap();
             let senzee_rank = rank_hand_senzee(&hand).unwrap();
             let tpp_rank = rank_hand_2p2(&hand, &self.lookup_table).unwrap();
             
@@ -84,8 +84,8 @@ mod tests {
             let hand2 = cards_arr(worse_hand);
             
             // Test with all algorithms
-            let naive1 = rank_hand_naive(&hand1).unwrap();
-            let naive2 = rank_hand_naive(&hand2).unwrap();
+            let naive1 = rank_hand_bits(&hand1).unwrap();
+            let naive2 = rank_hand_bits(&hand2).unwrap();
             
             let senzee1 = rank_hand_senzee(&hand1).unwrap();
             let senzee2 = rank_hand_senzee(&hand2).unwrap();
