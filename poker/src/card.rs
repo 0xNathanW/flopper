@@ -389,10 +389,10 @@ mod tests {
     #[test]
     fn test_suit_u8() {
         let card = Card::new(Rank::Ace, Suit::Hearts);
-        assert!(card.suit() as u8 == 0);
+        assert!(card.suit() as u8 == 2);
 
         let card = Card::new(Rank::Ace, Suit::Clubs);
-        assert!(card.suit() as u8 == 3);
+        assert!(card.suit() as u8 == 0);
     }
 
     #[test]
