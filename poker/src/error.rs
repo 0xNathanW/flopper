@@ -15,8 +15,8 @@ pub enum Error {
     #[error("Error loading lookup table: {0}")]
     LookupTableError(#[from] std::io::Error),
 
-    #[error("Could not find lookup table, should have been generated at build @ {0} ")]
-    LookupTableNotFound(String),
+    #[error("Could not find lookup table at provided path, generate with the generate_lookup binary")]
+    LookupTableNotFound,
 
     #[error("No lookup path set, should have been generated at build, or set existing env variable POKER_LOOKUP_TABLE_PATH")]
     LookupPathNotSet,

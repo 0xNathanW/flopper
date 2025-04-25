@@ -9,7 +9,7 @@ pub fn load_lookup_table<P: AsRef<Path>>(path: P) -> Result<Vec<i32>> {
     
     let mut file = std::fs::File::open(&path).map_err(|e| {
         if e.kind() == io::ErrorKind::NotFound {
-            Error::LookupTableNotFound(path.as_ref().display().to_string())
+            Error::LookupTableNotFound
         } else {
             Error::LookupTableError(e)
         }

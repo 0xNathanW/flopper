@@ -1,5 +1,4 @@
 use std::ops::Index;
-use rand::prelude::*;
 use crate::card::Card;
 
 #[derive(Debug, Clone)]
@@ -17,8 +16,8 @@ impl Deck {
         Deck((0..52_u8).map(|i| i.into()).collect())
     }
 
-    pub fn shuffle<R: Rng>(&mut self, rng: &mut R) {
-        self.0.shuffle(rng);
+    pub fn shuffle(&mut self) {
+        fastrand::shuffle(&mut self.0);
     }
 
     pub fn len(&self) -> usize {

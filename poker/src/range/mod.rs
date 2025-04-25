@@ -152,8 +152,7 @@ impl Range {
         }
 
         true
-    }
-    
+    }    
 }
 
 impl Debug for Range {

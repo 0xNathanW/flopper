@@ -9,13 +9,22 @@ mod tests;
 pub use enumerate::equity_enumerate;
 pub use monte_carlo::equity_monte_carlo;
 
-pub struct EquityParams<'a> {
-    pub ranges: Vec<Range>,
-    pub board:  Board,
-    pub lookup: &'a [i32],
+pub trait ProgressReporter: Send + Sync {
+    fn board_complete(&self);
 }
 
-// Results of player i at index i.
+pub struct EquityParams<'a> {
+    pub ranges:   Vec<Range>,
+    pub board:    Board,
+    pub lookup:   &'a [i32],
+    pub reporter: Option<&'a dyn ProgressReporter>,
+}
+
+pub enum EquityMethod {
+    Enumerate,
+    MonteCarlo(Option<usize>),
+}
+
 #[derive(Debug, Clone)]
 pub struct EquityResults {
     pub wins:   Vec<f64>,
@@ -31,6 +40,16 @@ impl EquityResults {
             ties:   vec![0.0; num_players],
             total:  0.0,
         }
+    }
+
+    pub fn combine(results: Vec<EquityResults>) -> Self {
+        let mut total = Self::new(results.len());
+        for result in results {
+            total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
+            total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
+            total.total += result.total;
+        }
+        total
     }
 
     pub fn equities(&self) -> Vec<f64> {
@@ -83,7 +102,6 @@ impl EquityResults {
     }
 }
 
-// Remove combos conflicting with board and dead cards.
 pub fn remove_dead(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck)> {
     
     let mut deck = Deck::new();

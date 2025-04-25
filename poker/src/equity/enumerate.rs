@@ -1,29 +1,46 @@
 use crate::{evaluate::eval_7_2p2, prelude::*};
-use super::{EquityParams, EquityResults, remove_dead};
+use super::{EquityParams, EquityResults, remove_dead, ProgressReporter};
 use rayon::prelude::*;
 
-pub fn equity_enumerate(params: EquityParams) -> Result<EquityResults> {
+pub fn equity_enumerate(equity_params: EquityParams) -> Result<EquityResults> {
 
-    let board_cards = params.board.as_vec();
-    let (ranges, deck) = remove_dead(params.ranges, &board_cards)?;
+    let board_cards = equity_params.board.as_vec();
+    let (ranges, deck) = remove_dead(equity_params.ranges, &board_cards)?;
 
-    let results = if params.board.is_river_dealt() {
-        enumerate_river(ranges, &board_cards, params.lookup)
+    let params = EnumerateParams {
+        ranges,
+        deck,
+        board: board_cards,
+        lookup: equity_params.lookup,
+        reporter: equity_params.reporter,
+    };
 
-    } else if params.board.is_turn_dealt() {
-        enumerate_turn(ranges, &board_cards, deck, params.lookup)
-    
-    } else if params.board.is_flop_dealt() {
-        enumerate_flop(ranges, &board_cards, deck, params.lookup)
-    
+    let results = if equity_params.board.is_river_dealt() {
+        enumerate_river(params)
+    } else if equity_params.board.is_turn_dealt() {
+        enumerate_turn(params)
+    } else if equity_params.board.is_flop_dealt() {
+        enumerate_flop(params)
     } else {
-        enumerate_preflop(ranges, deck, params.lookup)
+        enumerate_preflop(params)
     };
 
     Ok(results)
 }
 
-fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) -> EquityResults {
+struct EnumerateParams<'a> {
+    ranges:   Vec<Vec<(Hand, f32)>>,
+    deck:     Deck,
+    board:    Vec<Card>,
+    lookup:   &'a [i32],
+    reporter: Option<&'a dyn ProgressReporter>,
+}
+
+fn enumerate_preflop(params: EnumerateParams) -> EquityResults {
+    
+    let deck = params.deck;
+    let ranges = params.ranges;
+
     let results = (0..deck.len()).into_par_iter().map(|a| {
         let mut cards = [Card::default(); 7];
         cards[2] = deck[a];
@@ -37,7 +54,11 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) 
                     cards[5] = deck[d];
                     for e in (d + 1)..deck.len() {
                         cards[6] = deck[e];
-                        enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
+                        
+                        enumerate_board(&ranges, &mut local_results, &mut cards, &params.lookup);
+                        if let Some(reporter) = params.reporter {
+                            reporter.board_complete();
+                        }
                     }
                 }
             }
@@ -45,64 +66,61 @@ fn enumerate_preflop(ranges: Vec<Vec<(Hand, f32)>>, deck: Deck, lookup: &[i32]) 
         local_results
     }).collect::<Vec<EquityResults>>();
     
-    let mut total = EquityResults::new(ranges.len());
-    for result in results {
-        total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
-        total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
-        total.total += result.total;
-    }
-
-    total
+    EquityResults::combine(results)
 }
 
-fn enumerate_flop(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> EquityResults {
+fn enumerate_flop(params: EnumerateParams) -> EquityResults {
+    
+    let deck = params.deck;
+    let ranges = params.ranges;
 
     let results = (0..deck.len()).into_par_iter().map(|a| {
-
         let mut cards = [Card::default(); 7];
         cards[5] = deck[a];
-        cards[2..5].copy_from_slice(board);
+        cards[2..5].copy_from_slice(&params.board);
         let mut local_results = EquityResults::new(ranges.len());
 
         for b in (a + 1)..deck.len() {
             cards[6] = deck[b];
-            enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
+            enumerate_board(&ranges, &mut local_results, &mut cards, &params.lookup);
+            
+            if let Some(reporter) = params.reporter {
+                reporter.board_complete();
+            }
+        }
+        
+        local_results
+    }).collect::<Vec<EquityResults>>();
+
+    EquityResults::combine(results)
+}
+
+fn enumerate_turn(params: EnumerateParams) -> EquityResults {
+    
+    let deck = params.deck;
+    let ranges = params.ranges;
+
+    let results = (0..deck.len()).into_par_iter().map(|a| {
+        let mut cards = [Card::default(); 7];
+        cards[6] = deck[a];
+        cards[2..6].copy_from_slice(&params.board);
+        let mut local_results = EquityResults::new(ranges.len());
+        
+        enumerate_board(&ranges, &mut local_results, &mut cards, &params.lookup);
+        if let Some(reporter) = params.reporter {
+            reporter.board_complete();
         }
 
         local_results
     }).collect::<Vec<EquityResults>>();
 
-    let mut total = EquityResults::new(ranges.len());
-    for result in results {
-        total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
-        total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
-        total.total += result.total;
-    }
-
-    total
+    EquityResults::combine(results)
 }
 
-fn enumerate_turn(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], deck: Deck, lookup: &[i32]) -> EquityResults {
-
-    let results = (0..deck.len()).into_par_iter().map(|a| {
-        let mut cards = [Card::default(); 7];
-        cards[6] = deck[a];
-        cards[2..6].copy_from_slice(board);
-        let mut local_results = EquityResults::new(ranges.len());
-        enumerate_board(&ranges, &mut local_results, &mut cards, &lookup);
-        local_results
-    }).collect::<Vec<EquityResults>>();
-
-    let mut total = EquityResults::new(ranges.len());
-    for result in results {
-        total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
-        total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
-        total.total += result.total;
-    }
-    total
-}
-
-fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]) -> EquityResults {
+fn enumerate_river(params: EnumerateParams) -> EquityResults {
+    
+    let ranges = params.ranges;
+    let board = params.board;
 
     let mut results = EquityResults::new(ranges.len());
     let mut cards = [Card::default(); 7];
@@ -111,7 +129,11 @@ fn enumerate_river(ranges: Vec<Vec<(Hand, f32)>>, board: &[Card], lookup: &[i32]
     cards[4] = board[2];
     cards[5] = board[3];
     cards[6] = board[4];
-    enumerate_board(&ranges, &mut results, &mut cards, &lookup);
+    
+    enumerate_board(&ranges, &mut results, &mut cards, &params.lookup);
+    if let Some(reporter) = params.reporter {
+        reporter.board_complete();
+    }
 
     results
 }
@@ -148,11 +170,9 @@ fn enumerate_hands(
             }
         }
 
-        // If there is a single best hand, increment the win count for that hand.
         if best_idxs_count == 1 {
             results.wins[best_idxs[0]] += 1.0;
         } else {
-            // For debugging, don't split the tie
             let tie_value = 1.0 / best_idxs_count as f64;
             for idx in 0..best_idxs_count {
                 results.ties[best_idxs[idx]] += tie_value;

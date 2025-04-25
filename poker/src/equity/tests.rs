@@ -2,12 +2,12 @@ use crate::{evaluate::load_lookup_table, prelude::*};
 use super::{EquityParams, EquityResults, equity_enumerate, equity_monte_carlo};
 
 const LOOKUP_PATH: &str = "./data/lookup_table.bin";
-const MC_ITERATIONS: usize = 100_000;
+const MC_ITERATIONS: u64 = 100_000;
 
 fn assert_results_within_margin(results: &EquityResults, expected_win_pct: Vec<f64>, margin: f64, is_monte_carlo: bool) {
     let method = if is_monte_carlo { "Monte Carlo" } else { "Enumeration" };
     
-    assert_eq!(expected_win_pct.len(), results.wins.len());
+    assert_eq!(expected_win_pct.len(), results.wins.len(), "{} failed: Expected {} wins, got {}", method, expected_win_pct.len(), results.wins.len());
     
     let total_win_pct: f64 = expected_win_pct.iter().sum();
     let expected_tie_pct = if total_win_pct < 100.0 { 100.0 - total_win_pct } else { 0.0 };
@@ -51,6 +51,7 @@ fn test_river_heads_up() {
         ranges: ranges.clone(),
         board: board.clone(),
         lookup: &lookup,
+        reporter: None,
     };
     let results_enum = equity_enumerate(params_enum).unwrap();
     assert_results_within_margin(&results_enum, vec![56.0, 44.0], 1.0, false);
@@ -59,12 +60,12 @@ fn test_river_heads_up() {
         ranges: ranges.clone(),
         board,
         lookup: &lookup,
+        reporter: None,
     };
     let results_mc = equity_monte_carlo(params_mc, Some(MC_ITERATIONS)).unwrap();
     assert_results_within_margin(&results_mc, vec![56.0, 44.0], 5.0, true);
 }
 
-/// Test equity calculation on the river with multiple players
 #[test]
 fn test_river_multi() {
     let lookup = load_lookup_table(LOOKUP_PATH).unwrap();
@@ -79,6 +80,7 @@ fn test_river_multi() {
         ranges: ranges.clone(),
         board: board.clone(),
         lookup: &lookup,
+        reporter: None,
     };
     let results_enum = equity_enumerate(params_enum).unwrap();
     assert_results_within_margin(&results_enum, vec![13.0, 50.0, 37.0], 1.0, false);
@@ -87,12 +89,12 @@ fn test_river_multi() {
         ranges: ranges.clone(),
         board,
         lookup: &lookup,
+        reporter: None,
     };
     let results_mc = equity_monte_carlo(params_mc, Some(MC_ITERATIONS)).unwrap();
     assert_results_within_margin(&results_mc, vec![13.0, 50.0, 37.0], 5.0, true);
 }
 
-/// Test equity calculation on the turn with multiple players
 #[test]
 fn test_turn_multi() {
     let range_1 = Range::from_str("TT+, AKs").unwrap();
@@ -108,6 +110,7 @@ fn test_turn_multi() {
         ranges: ranges.clone(),
         board: board.clone(),
         lookup: &lookup,
+        reporter: None,
     };
     let results_enum = equity_enumerate(params_enum).unwrap();
     assert_results_within_margin(&results_enum, vec![32.0, 26.0, 37.0], 1.0, false);
@@ -116,6 +119,7 @@ fn test_turn_multi() {
         ranges: ranges.clone(),
         board,
         lookup: &lookup,
+        reporter: None,
     };
     let results_mc = equity_monte_carlo(params_mc, Some(MC_ITERATIONS)).unwrap();
     assert_results_within_margin(&results_mc, vec![32.0, 26.0, 37.0], 5.0, true);
@@ -134,6 +138,7 @@ fn test_flop_heads_up() {
         ranges: ranges.clone(),
         board: board.clone(),
         lookup: &lookup,
+        reporter: None,
     };
     let results_enum = equity_enumerate(params_enum).unwrap();
     assert_results_within_margin(&results_enum, vec![66.0, 32.0], 1.0, false);
@@ -142,6 +147,7 @@ fn test_flop_heads_up() {
         ranges: ranges.clone(),
         board,
         lookup: &lookup,
+        reporter: None,
     };
     let results_mc = equity_monte_carlo(params_mc, Some(MC_ITERATIONS * 2)).unwrap();
     assert_results_within_margin(&results_mc, vec![66.0, 32.0], 5.0, true);

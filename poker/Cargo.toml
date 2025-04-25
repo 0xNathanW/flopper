@@ -4,7 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-rand = "0.8.5"
 regex = "1.7.1"
 thiserror = "1.0.39"
 rayon = "1.7.0"

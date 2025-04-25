@@ -41,7 +41,23 @@ Performance counter stats for 'cargo run --bin equity -r -- 77+, A9s+, KTs+, AJo
 
     1407.255328000 seconds user
        2.637371000 seconds sys
-129.5 seconds
-123.1 seconds
 
-hand mask slight optimisation.
+
+Added some progress counters and whatnot.
+Performance counter stats for 'cargo run --bin equity -r -- 77+, A9s+, KTs+, AJo+ 44+, A2s+, K9s+, Q9s+, J9s+, T9s, 98s, 87s, 76s, ATo+, KJo+ --lookup ./data/lookup_table.bin':
+
+      1,343,377.08 msec task-clock                       #    9.421 CPUs utilized             
+           306,922      context-switches                 #  228.470 /sec                      
+             4,615      cpu-migrations                   #    3.435 /sec                      
+            38,556      page-faults                      #   28.701 /sec                      
+ 5,431,124,034,988      cycles                           #    4.043 GHz                       
+   234,200,536,698      stalled-cycles-frontend          #    4.31% frontend cycles idle      
+ 8,589,135,375,092      instructions                     #    1.58  insn per cycle            
+                                                  #    0.03  stalled cycles per insn   
+ 1,374,915,214,127      branches                         #    1.023 G/sec                     
+    16,827,526,548      branch-misses                    #    1.22% of all branches           
+
+     142.591406106 seconds time elapsed
+
+    1337.714120000 seconds user
+       4.628992000 seconds sys

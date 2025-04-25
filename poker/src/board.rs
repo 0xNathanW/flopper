@@ -112,6 +112,17 @@ impl Board {
         }
         Ok(())
     }
+
+    // Returns the number of possible runouts for the current board state
+    pub fn num_runouts(&self) -> u64 {
+        match self.as_vec().len() {
+            0 => 2_598_960,
+            3 => 1_176,
+            4 => 48,
+            5 => 1,
+            _ => unreachable!(),
+        }
+    }
 }
 
 #[cfg(test)]

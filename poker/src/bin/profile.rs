@@ -49,7 +49,7 @@ fn main() {
     match args.order {
         EnumerationMethod::Random => {
             for _ in 0..COMBO_COUNT {
-                let idxs = fast_random_indices();
+                let idxs = random_idxs();
                 hand[0] = cards[idxs[0]];
                 hand[1] = cards[idxs[1]];
                 hand[2] = cards[idxs[2]];
@@ -111,7 +111,7 @@ fn evaluate_hand(hand: &[Card; 7], method: EvaluationMethod, lookup: &Option<Vec
 }
 
 #[inline(always)]
-fn fast_random_indices() -> [usize; 7] {
+fn random_idxs() -> [usize; 7] {
     let mut indices = [0; 7];
     let mut i = 0;
     
