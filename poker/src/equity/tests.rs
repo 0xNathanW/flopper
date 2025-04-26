@@ -7,7 +7,7 @@ const MC_ITERATIONS: u64 = 100_000;
 fn assert_results_within_margin(results: &EquityResults, expected_win_pct: Vec<f64>, margin: f64, is_monte_carlo: bool) {
     let method = if is_monte_carlo { "Monte Carlo" } else { "Enumeration" };
     
-    assert_eq!(expected_win_pct.len(), results.wins.len(), "{} failed: Expected {} wins, got {}", method, expected_win_pct.len(), results.wins.len());
+    assert_eq!(expected_win_pct.len(), results.wins.len(), "{} failed: Expected length {}, got {}", method, expected_win_pct.len(), results.wins.len());
     
     let total_win_pct: f64 = expected_win_pct.iter().sum();
     let expected_tie_pct = if total_win_pct < 100.0 { 100.0 - total_win_pct } else { 0.0 };

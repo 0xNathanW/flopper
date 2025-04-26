@@ -78,7 +78,7 @@ fn monte_carlo_preflop(params: MonteCarloParams) -> EquityResults {
         }
         local_results
     }).collect::<Vec<EquityResults>>();
-    
+
     EquityResults::combine(results)
 }
 
@@ -156,8 +156,8 @@ fn monte_carlo_turn(params: MonteCarloParams) -> EquityResults {
 
 fn monte_carlo_river(params: MonteCarloParams) -> EquityResults {
     let num_threads = rayon::current_num_threads() as u64;
-    let iterations_per_thread = params.iterations.map(|i| (i + num_threads - 1) / num_threads);
-    
+    let iterations_per_thread = params.iterations.map(|i | (i + num_threads - 1) / num_threads);
+
     let results = (0..num_threads).into_par_iter().map(|_| {
         let mut local_results = EquityResults::new(params.ranges.len());
         let mut cards = [Card::default(); 7];

@@ -43,7 +43,7 @@ impl EquityResults {
     }
 
     pub fn combine(results: Vec<EquityResults>) -> Self {
-        let mut total = Self::new(results.len());
+        let mut total = Self::new(results[0].wins.len());
         for result in results {
             total.wins.iter_mut().zip(result.wins.iter()).for_each(|(a, b)| *a += b);
             total.ties.iter_mut().zip(result.ties.iter()).for_each(|(a, b)| *a += b);
