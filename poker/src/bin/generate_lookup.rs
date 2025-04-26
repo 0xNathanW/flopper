@@ -16,7 +16,7 @@ struct Args {
 fn main() -> Result<()> {
     let args = Args::parse();
     let table = generate_lookup_table();
-    println!("Saving lookup table to {}...", args.path.display());
+    println!("Saving lookup table to {}", args.path.display());
     save_lookup_table(table, &args.path)
 }
 
@@ -46,7 +46,6 @@ fn generate_lookup_table() -> Vec<i32> {
     sub_hand_queue.push_back(0);
     sub_hands.insert(0, 0);
 
-    // Setup the progress bar for enumerating sub hands
     let progress_bar = ProgressBar::new_spinner();
     progress_bar.set_style(
         ProgressStyle::default_spinner()
@@ -85,11 +84,10 @@ fn generate_lookup_table() -> Vec<i32> {
         *val = idx as i64;
     }
 
-    // Setup the progress bar for the main table generation
     let pb = ProgressBar::new(sub_hands.len() as u64);
     pb.set_style(
         ProgressStyle::default_bar()
-            .template("[{elapsed_precise}] [{bar:40}] {pos}/{len} ({percent}%)")
+            .template("{spinner} [{elapsed_precise}] [{bar:40}] {pos}/{len} ({percent}%)")
             .unwrap()
             .progress_chars("=> ")
     );
