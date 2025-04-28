@@ -1,6 +1,6 @@
 use thiserror::Error;
 use regex::Regex;
-use crate::card::{Card, Rank, CardParseError};
+use crate::card::{Card, CardParseError, Rank, Suit};
 
 #[derive(Error, Debug)]
 pub enum HandParseError {
@@ -10,8 +10,24 @@ pub enum HandParseError {
     CardError(#[from] CardParseError),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy, PartialOrd, Ord)]
 pub struct Hand(pub Card, pub Card);
+
+impl PartialEq for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}
+
+impl Eq for Hand {}
+
+impl std::hash::Hash for Hand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let sorted = self.sorted();
+        sorted.0.hash(state);
+        sorted.1.hash(state);
+    }
+}
 
 impl Hand {
     pub fn from_str(s: &str) -> Result<Hand, HandParseError> {
@@ -31,7 +47,11 @@ impl Hand {
         let b = Card::from_str(b)?;
         
         Ok(Hand(a, b))
-    }   
+    }
+
+    pub fn random() -> Hand {
+        Hand(Card::random(), Card::random())
+    }
 
     pub fn pocket_pair(&self) -> bool {
         self.0.rank() == self.1.rank()
@@ -45,12 +65,21 @@ impl Hand {
         self.0.rank().max(self.1.rank())
     } 
 
+    #[inline]
+    fn sorted(&self) -> Hand {
+        let mut hand = *self;
+        if (hand.1.rank() != hand.0.rank() && hand.1.rank() > hand.0.rank()) || 
+           (hand.1.rank() == hand.0.rank() && hand.1.suit() > hand.0.suit()) {
+            std::mem::swap(&mut hand.0, &mut hand.1);
+        }
+        hand
+    }
+
     // Returns index of hand in the range array.
     pub fn idx(&self) -> usize {
-        let (mut high, mut low) = (self.0.0, self.1.0);
-        if high < low {
-            std::mem::swap(&mut high, &mut low);
-        }
+        let sorted = self.sorted();
+        let high = sorted.0.0;
+        let low = sorted.1.0;
 
         low as usize * (101 - low as usize) / 2 + high as usize - 1
     }
@@ -61,20 +90,20 @@ impl Hand {
         Hand(Card(card1 as u8), Card(card2 as u8))
     }
 
-    // Returns a bit mask of the two cards.
     pub fn mask(&self) -> u64 {
         (1 << self.0.0) | (1 << self.1.0)
     }
 
     pub fn chen_score(&self) -> i32 {
+        let sorted = self.sorted();
         
-        let mut base = self.0.max(self.1).chen_score();
-        let gap = ((self.0.rank() as i8 - self.1.rank() as i8).abs() as u8).saturating_sub(1);
+        let mut base = sorted.0.max(sorted.1).chen_score();
+        let gap = ((sorted.0.rank() as i8 - sorted.1.rank() as i8).abs() as u8).saturating_sub(1);
 
-        if self.pocket_pair() {
+        if sorted.pocket_pair() {
             base = 5.0_f32.max(base * 2.0);
         }
-        if self.suited() {
+        if sorted.suited() {
             base += 2.0;
         }
 
@@ -83,14 +112,14 @@ impl Hand {
         base -= match gap {
             0 => 0.0,
             1 => {
-                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+                if sorted.0.rank().max(sorted.1.rank()) < Rank::Queen {
                     0.0
                 } else {
                     1.0
                 }
             },
             2 => {
-                if self.0.rank().max(self.1.rank()) < Rank::Queen {
+                if sorted.0.rank().max(sorted.1.rank()) < Rank::Queen {
                     1.0
                 } else {
                     2.0
@@ -100,15 +129,84 @@ impl Hand {
             _ => 5.0,
         };
 
-        // Round up to the nearest integer.
         base.ceil() as i32
+    }
+
+    pub fn canonicalise_without_constraints(&mut self) {
+        *self = self.sorted();
+
+        if self.0.suit() == self.1.suit() {
+            if self.0.suit() == Suit::Spades {
+                return
+            } else {
+                self.0.swap_suit(Suit::Spades);
+                self.1.swap_suit(Suit::Spades);
+            }
+        } else {
+            self.0.swap_suit(Suit::Spades);
+            self.1.swap_suit(Suit::Hearts);
+        }
+    }
+
+    pub fn canonicalise(&mut self, valid_permutations: &[[Suit; 4]]) {
+        let mut candidates: Vec<Hand> = valid_permutations.iter().map(|perm| {
+            let mut h = self.clone();
+            h.0.swap_suit(perm[h.0.suit() as usize]);
+            h.1.swap_suit(perm[h.1.suit() as usize]);
+            h = h.sorted();
+            h
+        }).collect();
+
+        candidates.sort();
+        *self = candidates.remove(0);
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
     use super::*;
     use crate::card::{Rank, Suit};
+
+    #[test]
+    fn test_hand_equality() {
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        assert_eq!(hand1, hand2);
+        
+        let hand3 = Hand::from_str("Ah7d").unwrap();
+        let hand4 = Hand::from_str("7dAh").unwrap();
+        assert_eq!(hand3, hand4);
+        
+        let hand5 = Hand::from_str("Ah7d").unwrap();
+        let hand6 = Hand::from_str("7hAd").unwrap();
+        assert_ne!(hand5, hand6);
+    }
+
+    #[test]
+    fn test_hand_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+
+        fn get_hash<T: Hash>(t: &T) -> u64 {
+            let mut s = DefaultHasher::new();
+            t.hash(&mut s);
+            s.finish()
+        }
+
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        
+        assert_eq!(get_hash(&hand1), get_hash(&hand2));
+        
+        let mut set = HashSet::new();
+        set.insert(hand1);
+        assert!(set.contains(&hand2));
+        assert_eq!(set.len(), 1);
+        set.insert(hand2);
+        assert_eq!(set.len(), 1);
+    }
+
 
     #[test]
     fn test_from_str() {
@@ -166,4 +264,73 @@ mod tests {
             }
         }
     }
+
+    #[test]
+    fn test_canonicalise_without_constraints() {
+        let mut hand = Hand::from_str("KdQd").unwrap();
+        hand.canonicalise_without_constraints();
+        assert_eq!(hand, Hand::from_str("KsQs").unwrap());
+
+        let mut hand = Hand::from_str("KdQh").unwrap();
+        hand.canonicalise_without_constraints();
+        assert_eq!(hand, Hand::from_str("KsQh").unwrap());
+    }
+
+    #[test]
+    fn test_canonicalise_equivalence() {
+
+        use crate::isomorphism::valid_suit_permutations;
+        use crate::evaluate::rank_hand_senzee;
+
+        let mut board = [Card::default(); 5];
+        let mut used_cards = 0u64;
+        for i in 0..5 {
+            let mut card;
+            loop {
+                card = Card::random();
+                if used_cards & (1 << card.0) == 0 {
+                    used_cards |= 1 << card.0;
+                    break;
+                }
+            }
+            board[i] = card;
+        }
+        println!("{:?}", board);
+        let suits_on_board = HashSet::from_iter(board.iter().map(|c| c.suit()));
+        let valid_permutations = valid_suit_permutations(&suits_on_board);
+        
+        let mut hands = Vec::with_capacity(1000);
+        for _ in 0..1000 {
+            hands.push(Hand::random());
+        }
+        let board_mask = board.iter().fold(0, |acc, c| acc | (1 << c.0));
+        hands.retain(|hand| hand.mask() & board_mask == 0);
+
+        let mut unique_canonical_hands = HashSet::new();
+        let mut unique_original_hands = HashSet::new();
+        
+        let mut hand = [Card::default(); 7];
+        for (i, c) in board.iter().enumerate() {
+            hand[i] = *c;
+        }
+        
+        for hole in hands {
+            let mut c_hole = hole.clone();
+            hand[5] = hole.0;
+            hand[6] = hole.1;
+            let orig_rank = rank_hand_senzee(&hand).unwrap();
+            
+            c_hole.canonicalise(&valid_permutations);
+            hand[5] = c_hole.0;
+            hand[6] = c_hole.1;
+            let canonical_rank = rank_hand_senzee(&hand).unwrap();
+        
+            println!("{:?} -> {:?}", hole, c_hole);
+            assert_eq!(orig_rank, canonical_rank);
+            unique_canonical_hands.insert(c_hole);
+            unique_original_hands.insert(hole);
+        }
+        println!("reduced from {} to {}", unique_original_hands.len(), unique_canonical_hands.len());
+    }
+    
 }

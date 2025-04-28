@@ -102,7 +102,7 @@ impl EquityResults {
     }
 }
 
-pub fn remove_dead(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand, f32)>>, Deck)> {
+pub fn remove_dead(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<Hand>>, Deck)> {
     
     let mut deck = Deck::new();
     let mut removed = 0_u64;
@@ -115,7 +115,7 @@ pub fn remove_dead(ranges: Vec<Range>, board: &[Card]) -> Result<(Vec<Vec<(Hand,
     let hands = ranges
         .iter()
         .map(|range| {
-            let hands = range.hand_combos_dead(removed);
+            let hands = range.hand_combos(removed);
             hands
         }).collect();
 

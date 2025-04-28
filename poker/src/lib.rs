@@ -5,6 +5,7 @@ pub mod hand;
 pub mod board;
 pub mod evaluate;
 pub mod equity;
+pub mod isomorphism;
 pub mod range;
 pub mod tables;
 pub mod error;

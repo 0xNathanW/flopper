@@ -29,7 +29,7 @@ pub fn equity_enumerate(equity_params: EquityParams) -> Result<EquityResults> {
 }
 
 struct EnumerateParams<'a> {
-    ranges:   Vec<Vec<(Hand, f32)>>,
+    ranges:   Vec<Vec<Hand>>,
     deck:     Deck,
     board:    Vec<Card>,
     lookup:   &'a [i32],
@@ -139,7 +139,7 @@ fn enumerate_river(params: EnumerateParams) -> EquityResults {
 }
 
 fn enumerate_hands(
-    ranges: &Vec<Vec<(Hand, f32)>>,
+    ranges: &Vec<Vec<Hand>>,
     range_idx: usize,
     used_cards: &mut u64,
     hands: &mut Vec<Hand>,
@@ -183,7 +183,7 @@ fn enumerate_hands(
         return;
     }
 
-    for (hand, _) in &ranges[range_idx] {
+    for hand in &ranges[range_idx] {
 
         let hand_mask = 1 << hand.0.0 | 1 << hand.1.0;
         if *used_cards & hand_mask != 0 {
@@ -201,7 +201,7 @@ fn enumerate_hands(
 }
 
 fn enumerate_board(
-    ranges: &Vec<Vec<(Hand, f32)>>,
+    ranges: &Vec<Vec<Hand>>,
     results: &mut EquityResults,
     board: &mut [Card; 7],
     lookup_table: &[i32],
