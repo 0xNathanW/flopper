@@ -13,7 +13,7 @@ pub fn valid_suit_permutations(suits_on_board: &HashSet<Suit>) -> Vec<[Suit; 4]>
         .filter(|&i| !suits_on_board.contains(&SUITS[i]))
         .collect();
     
-    // base case
+    // Base case.
     if free_suits.len() <= 1 {
         return result;
     }

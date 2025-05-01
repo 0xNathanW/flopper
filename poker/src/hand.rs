@@ -50,7 +50,15 @@ impl Hand {
     }
 
     pub fn random() -> Hand {
-        Hand(Card::random(), Card::random())
+        let first = Card::random();
+        let mut second;
+        loop {
+            second = Card::random();
+            if first != second {
+                break;
+            }
+        }
+        Hand(first, second)
     }
 
     pub fn pocket_pair(&self) -> bool {
@@ -276,18 +284,18 @@ mod tests {
         assert_eq!(hand, Hand::from_str("KsQh").unwrap());
     }
 
-    #[test]
-    fn test_canonicalise_equivalence() {
-
+    fn test_canonicalise_equivalence_with_board(board_suits: &[Suit]) -> usize {
         use crate::isomorphism::valid_suit_permutations;
         use crate::evaluate::rank_hand_senzee;
 
         let mut board = [Card::default(); 5];
         let mut used_cards = 0u64;
         for i in 0..5 {
+            let suit = board_suits[i % board_suits.len()];
             let mut card;
             loop {
-                card = Card::random();
+                let rank = fastrand::u8(0..13);
+                card = Card::new(rank.into(), suit);
                 if used_cards & (1 << card.0) == 0 {
                     used_cards |= 1 << card.0;
                     break;
@@ -295,20 +303,26 @@ mod tests {
             }
             board[i] = card;
         }
-        println!("{:?}", board);
+
         let suits_on_board = HashSet::from_iter(board.iter().map(|c| c.suit()));
         let valid_permutations = valid_suit_permutations(&suits_on_board);
         
-        let mut hands = Vec::with_capacity(1000);
-        for _ in 0..1000 {
-            hands.push(Hand::random());
+        let mut hands = Vec::new();
+        for i in 0..52_u8 {
+            if used_cards & (1 << i) != 0 {
+                continue; 
+            }
+            
+            for j in (i + 1)..52_u8 {
+                if used_cards & (1 << j) != 0 {
+                    continue;
+                }
+                
+                hands.push(Hand(Card(i), Card(j)));
+            }
         }
-        let board_mask = board.iter().fold(0, |acc, c| acc | (1 << c.0));
-        hands.retain(|hand| hand.mask() & board_mask == 0);
 
-        let mut unique_canonical_hands = HashSet::new();
-        let mut unique_original_hands = HashSet::new();
-        
+        let mut unique_canonical_hands = HashSet::new();        
         let mut hand = [Card::default(); 7];
         for (i, c) in board.iter().enumerate() {
             hand[i] = *c;
@@ -316,21 +330,49 @@ mod tests {
         
         for hole in hands {
             let mut c_hole = hole.clone();
+            c_hole.canonicalise(&valid_permutations);
+            
             hand[5] = hole.0;
             hand[6] = hole.1;
             let orig_rank = rank_hand_senzee(&hand).unwrap();
             
-            c_hole.canonicalise(&valid_permutations);
             hand[5] = c_hole.0;
             hand[6] = c_hole.1;
             let canonical_rank = rank_hand_senzee(&hand).unwrap();
         
-            println!("{:?} -> {:?}", hole, c_hole);
-            assert_eq!(orig_rank, canonical_rank);
+            assert_eq!(orig_rank, canonical_rank, "canonical hand doesn't produce the same rank as the original hands");
             unique_canonical_hands.insert(c_hole);
-            unique_original_hands.insert(hole);
         }
-        println!("reduced from {} to {}", unique_original_hands.len(), unique_canonical_hands.len());
+
+        unique_canonical_hands.len()
+    }
+
+    #[test]
+    fn test_canonicalise_equivalence_one_suit() {
+        let board_suits = [Suit::Spades];
+        let canonical = test_canonicalise_equivalence_with_board(&board_suits);
+        assert_eq!(canonical, 301);
+    }
+
+    #[test]
+    fn test_canonicalise_equivalence_two_suits() {
+        let board_suits = [Suit::Spades, Suit::Hearts];
+        let canonical = test_canonicalise_equivalence_with_board(&board_suits);
+        assert_eq!(canonical, 652);
+    }
+
+    #[test]
+    fn test_canonicalise_equivalence_three_suits() {
+        let board_suits = [Suit::Spades, Suit::Hearts, Suit::Diamonds];
+        let canonical = test_canonicalise_equivalence_with_board(&board_suits);
+        assert_eq!(canonical, 1081);
+    }
+
+    #[test]
+    fn test_canonicalise_equivalence_four_suits() {
+        let board_suits = [Suit::Spades, Suit::Hearts, Suit::Diamonds, Suit::Clubs];
+        let canonical = test_canonicalise_equivalence_with_board(&board_suits);
+        assert_eq!(canonical, 1081);
     }
     
 }
