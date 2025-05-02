@@ -1,13 +1,13 @@
 use std::sync::{atomic::{AtomicBool, Ordering}, Arc};
 use crate::{evaluate::eval_7_2p2, prelude::*};
-use super::{remove_dead, EquityParams, EquityResults, ProgressReporter};
+use super::{preprocess_ranges, EquityParams, EquityResults, ProgressReporter};
 use rayon::prelude::*;
 use signal_hook::flag;
 
 pub fn equity_monte_carlo(equity_params: EquityParams, iterations: Option<u64>) -> Result<EquityResults> {
 
     let board = equity_params.board.as_vec();
-    let (ranges, deck) = remove_dead(equity_params.ranges, &board)?;
+    let (ranges, deck) = preprocess_ranges(equity_params.ranges, &board)?;
 
     let running = Arc::new(AtomicBool::new(true));
     let r = running.clone();
@@ -37,7 +37,7 @@ pub fn equity_monte_carlo(equity_params: EquityParams, iterations: Option<u64>) 
 }
 
 struct MonteCarloParams<'a> {
-    ranges:     Vec<Vec<(Hand, f32)>>,
+    ranges:     Vec<Vec<Hand>>,
     deck:       Deck,
     board:      Vec<Card>,
     lookup:     &'a [i32],
@@ -184,7 +184,7 @@ fn monte_carlo_river(params: MonteCarloParams) -> EquityResults {
 }
 
 fn monte_carlo_sample_hands(
-    ranges: &Vec<Vec<(Hand, f32)>>,
+    ranges: &Vec<Vec<Hand>>,
     results: &mut EquityResults,
     board: &mut [Card; 7],
     lookup_table: &[i32],
@@ -197,7 +197,7 @@ fn monte_carlo_sample_hands(
     for range in ranges {
         let mut valid_hands = Vec::new();
         
-        for (hand, _) in range {
+        for hand in range {
             let hand_mask = 1 << hand.0.0 | 1 << hand.1.0;
             if current_used_cards & hand_mask == 0 {
                 valid_hands.push(*hand);

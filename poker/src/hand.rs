@@ -10,8 +10,28 @@ pub enum HandParseError {
     CardError(#[from] CardParseError),
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Debug, Clone, Copy)]
 pub struct Hand(pub Card, pub Card);
+
+impl PartialEq for Hand {
+    fn eq(&self, other: &Self) -> bool {
+        (self.0 == other.0 && self.1 == other.1) || (self.0 == other.1 && self.1 == other.0)
+    }
+}
+
+impl Eq for Hand {}
+
+impl std::hash::Hash for Hand {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        let (low, high) = if self.0.0 < self.1.0 {
+            (self.0, self.1)
+        } else {
+            (self.1, self.0)
+        };
+        low.hash(state);
+        high.hash(state);
+    }
+}
 
 impl Hand {
     pub fn from_str(s: &str) -> Result<Hand, HandParseError> {
@@ -32,6 +52,18 @@ impl Hand {
         
         Ok(Hand(a, b))
     }   
+
+    pub fn random() -> Hand {
+        let first = Card::random();
+        let mut second;
+        loop {
+            second = Card::random();
+            if first != second {
+                break;
+            }
+        }
+        Hand(first, second)
+    }
 
     pub fn pocket_pair(&self) -> bool {
         self.0.rank() == self.1.rank()
@@ -110,6 +142,45 @@ mod tests {
     use super::*;
     use crate::card::{Rank, Suit};
 
+    #[test]
+    fn test_hand_equality() {
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        assert_eq!(hand1, hand2);
+        
+        let hand3 = Hand::from_str("Ah7d").unwrap();
+        let hand4 = Hand::from_str("7dAh").unwrap();
+        assert_eq!(hand3, hand4);
+        
+        let hand5 = Hand::from_str("Ah7d").unwrap();
+        let hand6 = Hand::from_str("7hAd").unwrap();
+        assert_ne!(hand5, hand6);
+    }
+    
+    #[test]
+    fn test_hand_hash() {
+        use std::collections::hash_map::DefaultHasher;
+        use std::hash::{Hash, Hasher};
+        
+        fn get_hash<T: Hash>(t: &T) -> u64 {
+        let mut s = DefaultHasher::new();
+            t.hash(&mut s);
+            s.finish()
+        }
+        
+        let hand1 = Hand::from_str("Kh2s").unwrap();
+        let hand2 = Hand::from_str("2sKh").unwrap();
+        
+        assert_eq!(get_hash(&hand1), get_hash(&hand2));
+        
+        let mut set = std::collections::HashSet::new();
+        set.insert(hand1);
+        assert!(set.contains(&hand2));
+        assert_eq!(set.len(), 1);
+        set.insert(hand2);
+        assert_eq!(set.len(), 1);
+    }
+    
     #[test]
     fn test_from_str() {
         // With space.

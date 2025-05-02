@@ -62,3 +62,22 @@ Performance counter stats for 'cargo run --bin equity -r -- 77+, A9s+, KTs+, AJo
 
     1337.714120000 seconds user
        4.628992000 seconds sys
+
+New 5700x3d cpu.
+Performance counter stats for 'cargo run --bin equity -r -- 77+, A9s+, KTs+, AJo+ 44+, A2s+, K9s+, Q9s+, J9s+, T9s, 98s, 87s, 76s, ATo+, KJo+ --lookup ./data/lookup_table.bin':
+
+   1,266,851.94 msec task-clock           # 10.710 CPUs utilized
+   488,873 context-switches               # 385.896 /sec
+   2,226 cpu-migrations                   # 1.757 /sec
+   38,608 page-faults                     # 30.476 /sec
+   8,590,766,242,212 instructions         # 1.72 insn per cycle
+                                          # 0.01 stalled cycles per insn
+   4,999,053,320,245 cycles               # 3.946 GHz
+   83,275,984,810 stalled-cycles-frontend # 1.67% frontend cycles idle
+   1,375,256,091,233 branches             # 1.086 G/sec
+   13,350,164,820 branch-misses           # 0.97% of all branches
+
+118.286869571 seconds time elapsed
+
+1259.357054000 seconds user
+6.044547000 seconds sys
