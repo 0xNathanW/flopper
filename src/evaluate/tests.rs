@@ -59,7 +59,8 @@ mod tests {
     
     impl EvaluatorTester {
         fn new() -> Self {
-            let lookup_table = load_lookup_table("./data/lookup_table.bin").unwrap();
+            let lookup_path = std::env::var("LOOKUP_PATH").unwrap_or("data/lookup_table.bin".to_string());
+            let lookup_table = load_lookup_table(std::path::Path::new(&lookup_path)).unwrap();
             Self { lookup_table }
         }
         

@@ -1,5 +1,28 @@
-[workspace]
+[package]
+name = "poker"
+version = "0.1.0"
+edition = "2021"
 
-members = [
-    "poker",
-]
+[dependencies]
+regex = "1.7.1"
+thiserror = "1.0.39"
+rayon = "1.7.0"
+clap = { version = "4.2.4", features = ["derive"] }
+indicatif = "0.17.3"
+prettytable-rs = "0.10.0"
+anyhow = "1.0.98"
+signal-hook = "0.3.15"
+fastrand = "2.0.1"
+
+[dev-dependencies]
+md-5 = "0.10.5"
+hex-literal = "0.3.4"
+criterion = "0.4.0"
+
+[[bench]]
+name = "evaluate"
+harness = false
+
+[[bench]]
+name = "equity"
+harness = false

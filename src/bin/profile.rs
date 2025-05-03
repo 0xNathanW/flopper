@@ -38,7 +38,8 @@ fn main() {
     let cards = Deck::new();
     let mut hand = [Card::default(); 7];    
     let lookup = if args.eval == EvaluationMethod::TwoPlusTwo {
-        Some(load_lookup_table("data/lookup_table.bin").unwrap())
+        let lookup_path = std::env::var("LOOKUP_PATH").unwrap_or("data/lookup_table.bin".to_string());
+        Some(load_lookup_table(std::path::Path::new(&lookup_path)).unwrap())
     } else {
         None
     };

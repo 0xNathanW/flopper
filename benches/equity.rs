@@ -33,7 +33,8 @@ fn generate_random_board(num_cards: usize) -> Board {
 
 fn benchmark_monte_carlo(c: &mut Criterion) {
     
-    let lookup_table = match load_lookup_table(Path::new("data/lookup_table.bin")) {
+    let lookup_path = std::env::var("LOOKUP_PATH").unwrap_or("data/lookup_table.bin".to_string());
+    let lookup_table = match load_lookup_table(Path::new(&lookup_path)) {
         Ok(table) => table,
         Err(e) => {
             eprintln!("Failed to load lookup table: {}", e);
@@ -115,7 +116,8 @@ fn benchmark_monte_carlo(c: &mut Criterion) {
 
 fn benchmark_enumerate(c: &mut Criterion) {
     
-    let lookup_table = match load_lookup_table(Path::new("data/lookup_table.bin")) {
+    let lookup_path = std::env::var("LOOKUP_PATH").unwrap_or("data/lookup_table.bin".to_string());
+    let lookup_table = match load_lookup_table(Path::new(&lookup_path)) {
         Ok(table) => table,
         Err(e) => {
             eprintln!("Failed to load lookup table: {}", e);

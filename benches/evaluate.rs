@@ -50,8 +50,8 @@ fn benchmark_senzee(c: &mut Criterion) {
 
 fn benchmark_two_plus_two(c: &mut Criterion) {
     
-    let table_path = Path::new("data/lookup_table.bin");
-    let lookup_table = match load_lookup_table(table_path) {
+    let lookup_path = std::env::var("LOOKUP_PATH").unwrap_or("data/lookup_table.bin".to_string());
+    let lookup_table = match load_lookup_table(Path::new(&lookup_path)) {
         Ok(table) => table,
         Err(e) => {
             eprintln!("Failed to load lookup table: {}", e);
